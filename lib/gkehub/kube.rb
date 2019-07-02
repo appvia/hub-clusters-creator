@@ -5,15 +5,39 @@ require 'k8s-client'
 module GKE
   # Kube is a collection of methods for interacting with the kubernetes api
   class Kube
+    attr_accessor :endpoint, :token
+
     def initialize(endpoint, token)
+      raise ArgumentError, 'you have not specified an access token' unless token
+      raise ArgumentError, 'you have not specified an endpoint' unless endpoint
+
       @endpoint = "https://#{endpoint}" unless endpoint.start_with?('https')
       @token = token
       @client = K8s.client(
-        ("https://#{endpoint}" unless endpoint.start_with?('https')),
-        auth_token: token,
+        @endpoint,
+        auth_token: @token,
         ssl_verify_peer: false
       )
     end
+
+    # exists? checks if the resource exists
+    # rubocop:disable Metrics/LineLength
+    def exists?(name, kind, namespace = 'default', version = 'v1')
+      begin
+        @client.api(version).resource("#{kind}s", namespace: namespace).get(name)
+      rescue K8s::Error::NotFound
+        return false
+      end
+      true
+    end
+
+    # delete removes a resource from the cluster
+    def delete(name, kind, namespace = 'default', version = 'v1')
+      return unless exists?(name, kind, namespace, version)
+
+      @client.api(version).resource("#{kind}s", namespace: namespace).delete_resource(name)
+    end
+    # rubocop:enable Metrics/LineLength
 
     # kubectl is used to apply a manifest
     # rubocop:disable Metrics/AbcSize,Metrics/MethodLength,Metrics/LineLength
@@ -25,26 +49,22 @@ module GKE
       raise ArgumentError, 'no name associated to resource' unless resource.metadata.name
 
       name = resource.metadata.name
+      namespace = resource.metadata.namespace
       kind = resource.kind.downcase
       version = resource.apiVersion
 
-      # @step: check if the resource exists
-      begin
-        @client.api(version).resource("#{kind}s", namespace: resource.metadata.namespace).get(name)
-      rescue K8s::Error::NotFound
-        @client.api(version).resource("#{kind}s", namespace: resource.metadata.namespace).create_resource(resource)
-      end
+      @client.api(version).resource("#{kind}s", namespace: namespace).create_resource(resource) unless exists?(name, kind, namespace, version)
     end
 
-    # service_account returns the credentials for a service account
-    def service_account(name, namespace = 'kube-system')
+    # account returns the credentials for a service account
+    def account(name, namespace = 'kube-system')
       sa = @client.api('v1').resource('serviceaccounts', namespace: namespace).get(name)
       secret = @client.api('v1').resource('secrets', namespace: namespace).get(sa.secrets.first.name)
       secret.data.token
     end
 
-    # hold_for_kubeapi is responsible for waiting the api is available
-    def hold_for_kubeapi
+    # wait is responsible for waiting the api is available
+    def wait
       max_attempts = 60
       attempts = 0
 

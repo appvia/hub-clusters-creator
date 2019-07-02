@@ -1,8 +1,24 @@
 # frozen_string_literal: true
 
+# Copyright (C) 2019  Rohith Jayawardene <gambol99@gmail.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 require 'cluster'
 require 'gke'
 require 'kube'
+require 'logging'
 require 'policies'
 require 'template'
 
@@ -11,14 +27,16 @@ module GKE
   # Provision is the main agent class
   class Provision
     include Cluster
-    include Compute
-    include Policies
+    include Logging
     include Template
+
+    attr_accessor :compute
 
     def initialize(account, project, region)
       @account = account
       @project = project
       @region  = region
+      @compute = GKE::Compute.new(@account, @project, @region)
     end
 
     # default_options are the default options for a cluster
@@ -42,6 +60,7 @@ module GKE
         enable_private_endpoint: false,
         enable_private_network: true,
         image_type: 'COS',
+        logging: false,
         machine_type: 'n1-standard-1',
         maintenance_window: '03:00',
         master_ipv4_cidr_block: '172.16.0.0/28',
@@ -57,47 +76,44 @@ module GKE
     end
 
     # destroy is responsible for deleting a gke cluster
-    def destroy(name, project = @project, region = @region)
-      # @step: check the cluster exists
-      raise Exception, "the cluster: #{name} does not exist" unless exist?(name)
-
-      gke.delete_project_location_cluster("projects/#{project}/locations/#{region}/clusters/#{name}")
+    def destroy(name)
+      compute.delete(name)
     end
 
     # provision is responsible for provisioning the cluster
-    # rubocop:disable Metrics/AbcSize
+    # rubocop:disable Metrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
     def provision(options = {})
-      # @step: validate the options
       raise ArgumentError, 'you must specify a cluster name' unless options[:name]
       raise ArgumentError, 'you must specify a cluster description' unless options[:description]
 
       name = options[:name]
-
-      # @step: merge the default options with user defined ones
       config = default_options.merge(options)
+      @logging = options[:logging]
 
       # @step: we check if the cluster already exists
-      unless exist?(name)
-        # @step: attempt to provision the cluster
-        path = "projects/#{@project}/locations/#{@region}"
-        operation = gke.create_project_location_cluster(path, cluster_spec(config))
-        hold_for_operation(operation.name)
+      if !compute.cluster?(name)
+        info "creating the cluster: #{name}, region: #{@region}"
+        operation = compute.create(cluster_spec(config))
+        info "waiting for the cluster: #{name} to be created"
+        compute.hold_for_operation(operation.name)
+      else
+        info "skipping the creation of cluster: #{name} as it already exists"
       end
+      cluster = compute.cluster(name)
 
-      # @step: if private network we need to create a cloud-nat devices if
-      # not already there
-      edge = router('router')
-      if edge.nats.nil?
-        edge.nats = default_nat('cloud-nat')
-        compute.patch_router(@project, @region, 'router', edge)
+      # @step: if private networkng, create a cloud-nat devices if not already there
+      if config[:enable_private_network]
+        info 'checking if cloud-nat device has been created'
+        edge = compute.router('router')
+        if edge.nats.nil?
+          edge.nats = compute.default_nat('cloud-nat')
+          compute.patch_router('router', edge)
+        end
       end
-
-      # @step: get the cluster endpoint
-      cluster = list_clusters.select { |x| x.name = name }.first
 
       # @step: wait on the api to become available
-      k = GKE::Kube.new(cluster.endpoint, authorize.access_token)
-      k.hold_for_kubeapi
+      k = GKE::Kube.new(cluster.endpoint, compute.authorizer.access_token)
+      k.wait
 
       # @step: if private networking we need to provision a cloud-nat
       if config[:enable_pod_security_polices]
@@ -110,7 +126,7 @@ module GKE
       k.kubectl(DEFAULT_CLUSTER_ADMIN_BINDING)
 
       # @step: provision the software bundles
-      k.kubectl(bundle_options(config))
+      k.kubectl(bootstrap_config(config))
       k.kubectl(DEFAULT_BOOTSTRAP_JOB)
 
       # @step: wait for the bootstrapper to complete
@@ -119,16 +135,16 @@ module GKE
         GCP Region: #{@region}
         GCP Project: #{@project}
         Certificate Autority: #{cluster.master_auth.cluster_ca_certificate}
-        Cluster Token: #{k.service_account('sysadmin')}
+        Cluster Token: #{k.account('sysadmin')}
         Cloud NAT: #{config[:enable_private_network]}
       TEXT
     end
-    # rubocop:enable Metrics/AbcSize
+    # rubocop:enable Metrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
 
     private
 
-    # bundle_options returns the helm values for grafana
-    def bundle_options(options)
+    # bootstrap_config returns the helm values for grafana
+    def bootstrap_config(options)
       template = <<~YAML
         apiVersion: v1
         kind: ConfigMap

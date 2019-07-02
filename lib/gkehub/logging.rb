@@ -15,28 +15,36 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-require 'erb'
+require 'colorize'
 
 module GKE
-  # Tamplate is a collection of erb template
-  module Template
-    # Render is a class for templating
-    class Render
-      attr_accessor :context
+  # Logging is few helper functions for logging
+  module Logging
+    def info(string, options = {})
+      print formatted_string("[info] #{dated_string(string)}", options)
+    end
 
-      def initialize(context)
-        @context = context
-      end
+    def warn(string)
+      Kernel.warn formatted_string(string, symbol: '*', color: :orange)
+    end
 
-      def render(template)
-        ERB.new(template).result(get_binding)
-      end
+    def error(string)
+      Kernel.warn formatted_string(string, symbol: '!', color: :red)
+    end
 
-      # rubocop:disable Naming/AccessorMethodName
-      def get_binding
-        binding
-      end
-      # rubocop:enable Naming/AccessorMethodName
+    private
+
+    def dated_string(string)
+      "[#{Time.now}] #{string}"
+    end
+
+    def formatted_string(string, options = {})
+      return unless @logging
+
+      symbol = options[:symbol] || ''
+      string = string.to_s
+      string = string.colorize(options[:color]) if options[:color]
+      "#{symbol}#{string}\n"
     end
   end
 end

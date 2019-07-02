@@ -28,7 +28,8 @@ project = 'gke-learning-242311'
 
 c = GKE::Provisioner.new(account, project, region)
 c.provision(
-  name: 'test',
   description: 'just a test',
+  logging: true,
+  name: 'test',
   version: '1.13.7-gke.8'
 )
