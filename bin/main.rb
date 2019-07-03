@@ -27,7 +27,7 @@ region = 'europe-west2'
 project = 'gke-learning-242311'
 
 c = GKE::Provisioner.new(account, project, region, true)
-c.provision(
+puts c.provision(
   description: 'just a test',
   logging: true,
   name: 'test',
