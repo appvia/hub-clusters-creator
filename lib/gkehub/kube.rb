@@ -53,7 +53,7 @@ module GKE
             return true if job.status['succeeded'] >= 1
           end
         rescue Exception => e
-          raise e if retries > 10
+          raise e if retries > 100
 
           retries += 1
         end

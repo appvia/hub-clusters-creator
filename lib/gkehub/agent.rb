@@ -118,13 +118,13 @@ module GKE
     def provision_gke(config)
       name = config[:name]
 
-      info "checking if the cluster: '#{name}' exists"
+      info "checking if the gke cluster: '#{name}' exists"
       if compute.cluster?(name)
         info "skipping the creation of cluster: '#{name}' as it already exists"
       else
-        info "cluster: '#{name}' doesn't not exist, creating now"
+        info "cluster: '#{name}' does not exist, creating now"
         compute.create(cluster_spec(config)) do |operation|
-          info "waiting for the cluster: '#{name}' to be created, operation: #{operation.name}"
+          info "waiting for the cluster: '#{name}' to be created, operation: '#{operation.name}'"
           status = compute.hold_for_operation(operation.name)
           unless status.status_message.nil?
             raise ClusterCreationError, "operation: #{x.operation_type} failed, error: #{x.status_message}"
@@ -154,7 +154,7 @@ module GKE
       name = options[:name]
 
       # @step: validate the options
-      info "validating the configurable options for the cluster: #{name}"
+      info "validating the configurable options for the cluster: '#{name}'"
       config = validate_cluster_options(defaults.merge(options))
       result = {}
 
@@ -186,7 +186,7 @@ module GKE
 
           info 'successfully bootstrapped the cluster'
         rescue StandardError => e
-          raise BootstrapError, "failed to bootstrap cluster: #{name}, error: #{e}"
+          raise BootstrapError, "failed to bootstrap cluster: '#{name}', error: #{e}"
         end
 
         result = {
@@ -223,11 +223,11 @@ module GKE
         apiVersion: v1
         kind: ConfigMap
         metadata:
-          name: hub-bootstrap-bundle
+          name: bootstrap-bundle
           namespace: kube-system
         data:
           charts: |
-            loki/loki-stack,loki,-f /config/bundles/grafana.yaml
+            loki/loki-stack,loki,--values /config/bundles/grafana.yaml
             stable/prometheus,kube-system,
           repositories: |
             loki,https://grafana.github.io/loki/charts

@@ -79,7 +79,7 @@ DEFAULT_BOOTSTRAP_JOB = <<-YAML
     name: bootstrap
     namespace: kube-system
   spec:
-    backoffLimit: 4
+    backoffLimit: 20
     template:
       spec:
         serviceAccountName: sysadmin
@@ -97,5 +97,5 @@ DEFAULT_BOOTSTRAP_JOB = <<-YAML
         volumes:
         - name: bundle
           configMap:
-            name: hub-bootstrap-bundle
+            name: bootstrap-bundle
 YAML
