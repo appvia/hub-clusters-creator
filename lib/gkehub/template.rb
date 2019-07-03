@@ -29,7 +29,7 @@ module GKE
       end
 
       def render(template)
-        ERB.new(template).result(get_binding)
+        ERB.new(template, nil, '-').result(get_binding)
       end
 
       # rubocop:disable Naming/AccessorMethodName

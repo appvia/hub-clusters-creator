@@ -29,6 +29,8 @@ project = 'gke-learning-242311'
 c = GKE::Provisioner.new(account, project, region, true)
 puts c.provision(
   description: 'just a test',
+  grafana_hostname: 'grafana.demo.local',
+  grafana_ingress: true,
   logging: true,
   name: 'test',
   version: '1.13.7-gke.8'

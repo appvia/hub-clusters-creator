@@ -76,7 +76,7 @@ DEFAULT_BOOTSTRAP_JOB = <<-YAML
   apiVersion: batch/v1
   kind: Job
   metadata:
-    name: hub-bootstrap
+    name: bootstrap
     namespace: kube-system
   spec:
     backoffLimit: 4

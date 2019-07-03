@@ -38,6 +38,31 @@ module GKE
       @client.api(version).resource("#{kind}s", namespace: namespace).delete_resource(name)
     end
 
+    # wait_for_job is responsible for waiting for a job to complete
+    # rubocop:disable Metrics/MethodLength,Lint/RescueException,Metrics/AbcSize,Metrics/CyclomaticComplexity
+    def wait_for_job(name, namespace = 'default', timeout = 300, interval = 5)
+      unless exists?(name, 'job', namespace, 'batch/v1')
+        raise Exception, 'the job resource does not exist'
+      end
+
+      retries = counter = 0
+      while counter < timeout
+        begin
+          job = @client.api('batch/v1').resource('jobs').get(name, namespace: namespace)
+          unless job.status.nil?
+            return true if job.status['succeeded'] >= 1
+          end
+        rescue Exception => e
+          raise e if retries > 10
+
+          retries += 1
+        end
+        sleep(interval)
+        counter += interval
+      end
+    end
+    # rubocop:enable Metrics/MethodLength,Lint/RescueException,Metrics/AbcSize,Metrics/CyclomaticComplexity
+
     # kubectl is used to apply a manifest
     # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
     def kubectl(manifest)

@@ -180,6 +180,11 @@ module GKE
           info 'applying the cluster bootstrap job'
           k.kubectl(bootstrap_config(config))
           k.kubectl(DEFAULT_BOOTSTRAP_JOB)
+
+          info 'waiting for the bootstrap job to complete'
+          k.wait_for_job('bootstrap', 'kube-system')
+
+          info 'successfully bootstrapped the cluster'
         rescue StandardError => e
           raise BootstrapError, "failed to bootstrap cluster: #{name}, error: #{e}"
         end
@@ -236,20 +241,17 @@ module GKE
               sidecar:
                 datasources:
                   enabled: true
-              <% if context[:grafana_ingress] %>
+              <%- if context[:grafana_ingress] -%>
               service:
                 type: NodePort
                 port: 80
                 targetPort: 3000
-                annotations: {}
-                labels: {}
-
               ingress:
                 enabled: true
                 path: /
                 hosts:
-                  - <%= context[:grafana_hostname] %>
-              <% end %>
+                - <%= context[:grafana_hostname] %>
+              <%- end -%>
               grafana.ini:
                 paths:
                   data: /var/lib/grafana/data
@@ -262,18 +264,18 @@ module GKE
                   mode: console
                 grafana_net:
                   url: https://grafana.net
-                <% if context[:github_client_id] %>
+                <%- if context[:github_client_id] -%>
                 auth.github:
+                  allow_sign_up: true
+                  allowed_organizations: %<= context[:github_organization] %>
+                  api_url: https://api.github.com/user
+                  auth_url: https://github.com/login/oauth/authorize
                   client_id: <%= context[:github_client_id] %>
                   client_secret: <%= config[:github_client_secret] %>
                   enabled: true
-                  allow_sign_up: true
                   scopes: user,read:org
-                  auth_url: https://github.com/login/oauth/authorize
                   token_url: https://github.com/login/oauth/access_token
-                  api_url: https://api.github.com/user
-                  allowed_organizations: %<= context[:github_organization] %>
-                <% end %>
+                <%- end -%>
             prometheus:
               enabled: false
               server:
