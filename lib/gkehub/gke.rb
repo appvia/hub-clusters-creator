@@ -18,11 +18,31 @@
 require 'google/apis/compute_v1'
 require 'google/apis/container_v1beta1'
 require 'googleauth'
+require 'pp'
 
-# rubocop:disable Metrics/LineLength,Metrics/ClassLength
+module GKE
+  # Auth is the authentication code
+  module Auth
+    # authorize is responsible for providing an access token to operate
+    def authorize
+      if @authorizer.nil?
+        @authorizer = Google::Auth::ServiceAccountCredentials.make_creds(
+          json_key_io: StringIO.new(@account),
+          scope: 'https://www.googleapis.com/auth/cloud-platform'
+        )
+        @authorizer.fetch_access_token!
+      end
+      @authorizer
+    end
+  end
+end
+
 module GKE
   # Compute are a collection of methods used to interact with GCP
+  # rubocop:disable Metrics/LineLength,Metrics/ClassLength
   class Compute
+    include GKE::Auth
+
     Container = Google::Apis::ContainerV1beta1
     Compute = Google::Apis::ComputeV1
 
@@ -35,14 +55,16 @@ module GKE
       @compute = Compute::ComputeService.new
       @gke = Container::ContainerService.new
 
-      @gke.authorization = authorize
       @compute.authorization = authorize
+      @gke.authorization = authorize
     end
 
     # create is used to create a gke cluster
     def create(resource)
       path = "projects/#{@project}/locations/#{@region}"
-      @gke.create_project_location_cluster(path, resource)
+      c = @gke.create_project_location_cluster(path, resource)
+      yield c if block_given?
+      c
     end
 
     # destroy is used to kill off a cluster
@@ -51,8 +73,8 @@ module GKE
     end
 
     # patch_router is a wrapper for the patch router
-    def patch_router(_name, router)
-      @compute.patch_router(@project, @region, 'router', router)
+    def patch_router(name, router)
+      @compute.patch_router(@project, @region, name, router)
     end
 
     # default_nat returns a default cloud nat configuration
@@ -68,38 +90,48 @@ module GKE
     end
 
     # hold_for_operation is responisble for waiting for an operation to complete or error
-    # rubocop:disable Metrics/CyclomaticComplexity,Metrics/AbcSize,Metrics/MethodLength
-    def hold_for_operation(id, interval = 10, max_retries = 3, max_timeout = 15 * 60)
-      max_attempts = max_timeout / interval
+    # rubocop:disable Metrics/MethodLength,Lint/RescueException
+    def hold_for_operation(id, interval = 10, timeout = 900)
+      max_attempts = timeout / interval
       retries = attempts = 0
 
-      # @TODO this feels like a very naive timeout, but i don't know ruby too well so :-)
-      while retries < max_retries
+      while attempts < max_attempts
         begin
           resp = operation(id)
-          if !resp.nil? && (resp.status == 'DONE')
-            if resp.status_message.present?
-              raise Exception, "operation: #{x.operation_type} has failed with error message: #{resp.status_message}"
-            end
+          return resp if !resp.nil? && resp.status == 'DONE'
+        rescue Exception => e
+          raise Exception, "failed waiting on operation: #{id}, error: #{e}" if retries > 10
 
-            break
-          end
-          # @step: throw an exception if we've overrun the max attempts
-          raise Exception, "operation: #{x.operation_type}, target: #{x.target_link} has timed out" if attempts > max_attempts
-
-          sleep(interval)
-          attempts += 1
-        rescue StandardError
           retries += 1
-          sleep(5)
         end
+        sleep(interval)
+        attempts += 1
       end
+
+      raise Exception, "operation: #{id} has timed out waiting to finish"
     end
-    # rubocop:enable Metrics/CyclomaticComplexity,Metrics/AbcSize,Metrics/MethodLength
+    # rubocop:enable Metrics/MethodLength,Lint/RescueException
 
     # operation returns the current status of an operation
     def operation(id)
       @gke.get_project_location_operation("projects/#{@project}/locations/#{@region}/operations/*", operation_id: id)
+    end
+
+    # operations returns a list of all operations
+    def operations
+      list = @gke.list_project_location_operations("projects/#{@project}/locations/#{@region}").operations
+      list.each { |x| yield x } if block_given?
+      list
+    end
+
+    # operations_by_resource returns any operations filtered by the resource
+    def operations_by_resource(name, resource, operation_type = '')
+      operations.select do |x|
+        next unless x.target_link.end_with?("#{resource}/#{name}")
+        next if !operation_type.empty? && (!x.operation_type == operation_type)
+
+        true
+      end
     end
 
     # locations returns a list of compute locations
@@ -111,7 +143,9 @@ module GKE
 
     # router returns a specfic router
     def router(name)
-      routers.select { |x| x.name == name }.first
+      r = routers.select { |x| x.name == name }.first
+      yield r if block_given?
+      r
     end
 
     # router? check if the router exists
@@ -121,7 +155,9 @@ module GKE
 
     # routers returns the list of routers
     def routers
-      @compute.list_routers(@project, @region).items
+      list = @compute.list_routers(@project, @region).items
+      list.each { |x| yield x } if block_given?
+      list
     end
 
     # network? checks if the network exists in the region and project
@@ -131,7 +167,9 @@ module GKE
 
     # networks returns a list of networks in the region and project
     def networks
-      @compute.list_networks(@project)
+      list = @compute.list_networks(@project)
+      list.each { |x| yield x } if block_given?
+      list
     end
 
     # subnet? checks if the subnet exists in the project, network and region
@@ -141,9 +179,11 @@ module GKE
 
     # subnets returns a list of subnets in the network
     def subnets(network)
-      @compute.list_subnetworks(@project, @region).items.select do |x|
+      list = @compute.list_subnetworks(@project, @region).items.select do |x|
         x.network.end_with?(network)
       end.map(&:name)
+      list.each { |x| yield x } if block_given?
+      list
     end
 
     # cluster returns a specific cluster
@@ -160,22 +200,11 @@ module GKE
 
     # clusters returns a list of clusters
     def clusters
-      @gke.list_zone_clusters(nil, nil, parent: "projects/#{@project}/locations/#{@region}").clusters || []
-    end
-
-    private
-
-    # authorize is responsible for providing an access token to operate
-    def authorize
-      if @authorizer.nil?
-        @authorizer = Google::Auth::ServiceAccountCredentials.make_creds(
-          json_key_io: StringIO.new(@account),
-          scope: 'https://www.googleapis.com/auth/cloud-platform'
-        )
-        @authorizer.fetch_access_token!
-      end
-      @authorizer
+      path = "projects/#{@project}/locations/#{@region}"
+      list = @gke.list_zone_clusters(nil, nil, parent: path).clusters || []
+      list.each { |x| yield x } if block_given?
+      list
     end
   end
+  # rubocop:enable Metrics/LineLength,Metrics/ClassLength
 end
-# rubocop:enable Metrics/LineLength,Metrics/ClassLength

@@ -4,6 +4,7 @@ require 'k8s-client'
 
 module GKE
   # Kube is a collection of methods for interacting with the kubernetes api
+  # rubocop:disable Metrics/LineLength
   class Kube
     attr_accessor :endpoint, :token
 
@@ -21,7 +22,6 @@ module GKE
     end
 
     # exists? checks if the resource exists
-    # rubocop:disable Metrics/LineLength
     def exists?(name, kind, namespace = 'default', version = 'v1')
       begin
         @client.api(version).resource("#{kind}s", namespace: namespace).get(name)
@@ -37,10 +37,9 @@ module GKE
 
       @client.api(version).resource("#{kind}s", namespace: namespace).delete_resource(name)
     end
-    # rubocop:enable Metrics/LineLength
 
     # kubectl is used to apply a manifest
-    # rubocop:disable Metrics/AbcSize,Metrics/MethodLength,Metrics/LineLength
+    # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
     def kubectl(manifest)
       resource = K8s::Resource.from_json(YAML.safe_load(manifest).to_json)
       raise ArgumentError, 'no api version associated to resource' unless resource.apiVersion
@@ -52,9 +51,11 @@ module GKE
       namespace = resource.metadata.namespace
       kind = resource.kind.downcase
       version = resource.apiVersion
+      return if exists?(name, kind, namespace, version)
 
-      @client.api(version).resource("#{kind}s", namespace: namespace).create_resource(resource) unless exists?(name, kind, namespace, version)
+      @client.api(version).resource("#{kind}s", namespace: namespace).create_resource(resource)
     end
+    # rubocop:enable Metrics/AbcSize,Metrics/MethodLength
 
     # account returns the credentials for a service account
     def account(name, namespace = 'kube-system')
@@ -63,22 +64,19 @@ module GKE
       secret.data.token
     end
 
-    # wait is responsible for waiting the api is available
-    def wait
-      max_attempts = 60
+    # wait_for_kubeapi is responsible for waiting the api is available
+    def wait_for_kubeapi(max_attempts = 60, interval = 5)
       attempts = 0
-
-      # @step: wait for the api to be available
-      loop do
+      while attempts < max_attempts
         begin
-          break if @client.api('v1').resource('nodes').list
+          return if @client.api('v1').resource('nodes').list
         rescue StandardError
           attempts += 1
-          sleep(5)
-          raise Exception, 'timed out waiting for the api' if attempts >= max_attempts
         end
+        sleep(interval)
       end
+      raise Exception, 'timed out waiting for the kube api'
     end
-    # rubocop:enable Metrics/AbcSize,Metrics/MethodLength,Metrics/LineLength
   end
+  # rubocop:enable Metrics/LineLength
 end

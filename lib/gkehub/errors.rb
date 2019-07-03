@@ -15,21 +15,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-$LOAD_PATH.unshift File.join(File.dirname(__FILE__), 'gkehub/')
-require 'agent'
-
+# rubocop:disable Metrics/LineLength
 module GKE
-  # Provisioner is a wrapper to the agent
-  module Provisioner
-    ROOT = __dir__
-    require "#{ROOT}/gkehub/version"
+  # Errors is collection of custom errors and exceptions
+  module Errors
+    # ClusterCreationError defines an error occurred creating or configuring the cluster
+    class ClusterCreationError < StandardError
+      attr_accessor :operation_id
 
-    def self.version
-      GKE::VERSION
+      def initialize(msg = 'failed attempting to create the cluster', operation_id = '')
+        @operation_id = operation_id
+        super(msg)
+      end
     end
 
-    def self.new(account, project, region, logging = false)
-      GKE::Provision.new(account, project, region, logging)
+    # BootstrapError is thrown when we've encountered an error attempting to bootstrap cluster
+    class BootstrapError
+      def initialize(msg = 'failed attempting to bootstrap the cluster')
+        super(msg)
+      end
     end
   end
 end
+# rubocop:enable Metrics/LineLength

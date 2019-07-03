@@ -26,7 +26,7 @@ account = File.read('account.json')
 region = 'europe-west2'
 project = 'gke-learning-242311'
 
-c = GKE::Provisioner.new(account, project, region)
+c = GKE::Provisioner.new(account, project, region, true)
 c.provision(
   description: 'just a test',
   logging: true,
