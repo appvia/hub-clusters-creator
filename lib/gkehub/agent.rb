@@ -166,7 +166,7 @@ module GKE
       info 'bootstrap has successfully completed'
 
       info 'attempting to add or update dns record for grafana'
-      name = 'pining-mastiff-grafana'
+      name = 'loki-grafana'
       namespace = 'loki'
 
       # @step: wait for the ingress to appaar and provision and grab the address
@@ -257,8 +257,8 @@ module GKE
           namespace: #{BOOTSTRAP_NAMESPACE}
         data:
           charts: |
-            loki/loki-stack,loki,--values /config/bundles/grafana.yaml
-            stable/prometheus,kube-system,
+            loki/loki-stack,loki,--name loki --values /config/bundles/grafana.yaml
+            stable/prometheus,kube-system,--name prometheus
           repositories: |
             loki,https://grafana.github.io/loki/charts
           grafana.yaml: |
@@ -272,6 +272,10 @@ module GKE
                 fullnameOverride: prometheus-server
             grafana:
               enabled: true
+              image:
+                repository: grafana/grafana
+                tag: <%= context[:grafana_version] || 'latest' %>
+                pullPolicy: IfNotPresent
               sidecar:
                 datasources:
                   enabled: true

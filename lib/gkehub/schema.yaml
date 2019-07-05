@@ -291,6 +291,17 @@ properties:
       - ''
     pattern: ^(.*)$
 
+  grafana_disk_size:
+    $id: '#/properties/grafana_disk_size'
+    type: integer
+    title: Grafana Disk Size
+    default: 10
+    description: >
+      The size of the disk used for grafana instance
+    examples:
+      - 10
+      - 100
+
   grafana_hostname:
     $id: '#/properties/grafana_hostname'
     tags: ['default']
@@ -303,16 +314,17 @@ properties:
       - grafana
       - metrics
 
-  grafana_disk_size:
-    $id: '#/properties/grafana_disk_size'
-    type: integer
-    title: Grafana Disk Size
-    default: 10
+  grafana_version:
+    $id: '#/properties/grafana_version'
+    tags: ['advanced']
+    type: string
+    title: Grafana Version
+    default: '6.2.5'
     description: >
-      The size of the disk used for grafana instance
+      The version of the grafana to install
     examples:
-      - 10
-      - 100
+      - 6.2.5
+    pattern: ^(.*)$
 
   machine_type:
     $id: '#/properties/machine_type'

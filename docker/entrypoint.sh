@@ -64,11 +64,10 @@ deploy-bundles() {
 
   if [[ -f ${HELM_BUNDLES} ]]; then
     info "installing the helm charts"
-    while IFS=',' read chart namespace values; do
+    while IFS=',' read chart namespace options; do
       namespace=${namespace:-"default"}
-      info "installing chart: ${chart}, namespace: ${namespace}, values: ${values}"
-      echo "helm install --wait ${chart} --namespace ${namespace} ${values}"
-      helm install --wait ${chart} --namespace ${namespace} ${values} || return 1
+      info "installing chart: ${chart}, namespace: ${namespace}, options: ${options}"
+      helm install --wait ${chart} --namespace ${namespace} ${options} || return 1
     done < <(cat ${HELM_BUNDLES})
   fi
 }
