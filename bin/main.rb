@@ -25,13 +25,13 @@ region = 'europe-west2'
 project = 'gke-learning-242311'
 
 c = GKE::Provision.new(account, project, region, true)
-puts c.defaults
-#puts c.provision(
-#  description: 'just a test',
-#  domain: 'gkelearning.appvia.io',
-#  grafana_hostname: 'grafana.gkelearning.appvia.io',
-#  grafana_ingress: true,
-#  logging: true,
-#  name: 'test',
-#  version: '1.13.7-gke.8'
-#)
+#puts c.defaults
+puts c.provision(
+  description: 'just a test',
+  domain: 'gkelearning.appvia.io',
+  grafana_hostname: 'grafana.gkelearning.appvia.io',
+  grafana_ingress: true,
+  logging: true,
+  name: 'test',
+  version: '1.13.7-gke.8'
+)
