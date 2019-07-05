@@ -143,7 +143,7 @@ module GKE
         end
       end
 
-      info 'provisioning a dns entry for the master api'
+      info "provisioning a dns entry for the master api = > #{cluster.endpoint}"
       compute.dns(kubeapi_name(config).to_s, cluster.endpoint, config[:domain])
 
       cluster
@@ -238,8 +238,10 @@ module GKE
           locations: cluster.locations,
           network: config[:network],
           service_cidr: cluster.ip_allocation_policy.services_ipv4_cidr_block,
-          token: k.account('sysadmin')
+          token: k.account('sysadmin'),
+          type: 'regional'
         },
+        config: config,
         grafana: {
           enabled: true,
           hostname: config[:grafana_hostname]
