@@ -194,7 +194,6 @@ module GKE
         raise ClusterCreationError, "failed to build provision cluster, error: #{e}"
       end
 
-      # @step: if private networkng, create a cloud-nat devices if not already there
       begin
         k = GKE::Kube.new(cluster.endpoint, compute.authorizer.access_token)
         info 'waiting for the master api endpoint to be available'
