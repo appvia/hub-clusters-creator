@@ -18,20 +18,20 @@
 #
 $LOAD_PATH.unshift File.join(File.dirname(__FILE__), '.', '../lib')
 
-require 'rubygems' if RUBY_VERSION < '1.9.0'
 require 'gkehub'
-require 'pp'
 
 account = File.read('account.json')
 region = 'europe-west2'
 project = 'gke-learning-242311'
 
-c = GKE::Provisioner.new(account, project, region, true)
-puts c.provision(
-  description: 'just a test',
-  grafana_hostname: 'grafana.demo.local',
-  grafana_ingress: true,
-  logging: true,
-  name: 'test',
-  version: '1.13.7-gke.8'
-)
+c = GKE::Provision.new(account, project, region, true)
+puts c.defaults
+#puts c.provision(
+#  description: 'just a test',
+#  domain: 'gkelearning.appvia.io',
+#  grafana_hostname: 'grafana.gkelearning.appvia.io',
+#  grafana_ingress: true,
+#  logging: true,
+#  name: 'test',
+#  version: '1.13.7-gke.8'
+#)

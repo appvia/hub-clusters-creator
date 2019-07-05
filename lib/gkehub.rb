@@ -19,8 +19,8 @@ $LOAD_PATH.unshift File.join(File.dirname(__FILE__), 'gkehub/')
 require 'agent'
 
 module GKE
-  # Provisioner is a wrapper to the agent
-  module Provisioner
+  # Provision is a wrapper to the agent
+  module Provision
     ROOT = __dir__
     require "#{ROOT}/gkehub/version"
 
@@ -29,7 +29,7 @@ module GKE
     end
 
     def self.new(account, project, region, logging = false)
-      GKE::Provision.new(account, project, region, logging)
+      GKE::Agent.new(account, project, region, logging)
     end
   end
 end

@@ -4,7 +4,7 @@ require 'k8s-client'
 
 module GKE
   # Kube is a collection of methods for interacting with the kubernetes api
-  # rubocop:disable Metrics/LineLength
+  # rubocop:disable Metrics/LineLength,Metrics/MethodLength,Metrics/ParameterLists
   class Kube
     attr_accessor :endpoint, :token
 
@@ -24,36 +24,42 @@ module GKE
     # exists? checks if the resource exists
     def exists?(name, kind, namespace = 'default', version = 'v1')
       begin
-        @client.api(version).resource("#{kind}s", namespace: namespace).get(name)
+        kind = "#{kind}s" unless kind.end_with?('s')
+        @client.api(version).resource(kind, namespace: namespace).get(name)
       rescue K8s::Error::NotFound
         return false
       end
       true
     end
 
-    # delete removes a resource from the cluster
-    def delete(name, kind, namespace = 'default', version = 'v1')
-      return unless exists?(name, kind, namespace, version)
-
-      @client.api(version).resource("#{kind}s", namespace: namespace).delete_resource(name)
+    # get retrieves a resource from the cluster
+    def get(name, namespace, kind, version: 'v1')
+      @client.api(version).resource(kind, namespace: namespace).get(name)
     end
 
-    # wait_for_job is responsible for waiting for a job to complete
-    # rubocop:disable Metrics/MethodLength,Lint/RescueException,Metrics/AbcSize,Metrics/CyclomaticComplexity
-    def wait_for_job(name, namespace = 'default', timeout = 300, interval = 5)
-      unless exists?(name, 'job', namespace, 'batch/v1')
-        raise Exception, 'the job resource does not exist'
-      end
+    # delete removes a resource from the cluster
+    def delete(name, kind, namespace, version: 'v1')
+      return unless exists?(name, kind, namespace, version)
 
+      @client.api(version).resource(kind, namespace: namespace).delete_resource(name)
+    end
+
+    # wait is used to poll until a resource meets the needs of the consumer
+    # rubocop:disable Lint/RescueException,Metrics/CyclomaticComplexity
+    def wait(name, namespace, kind, version: 'v1', max_retries: 100, timeout: 300, interval: 5, &block)
       retries = counter = 0
       while counter < timeout
         begin
-          job = @client.api('batch/v1').resource('jobs').get(name, namespace: namespace)
-          unless job.status.nil?
-            return true if job.status['succeeded'] >= 1
+          unless block_given?
+            return if exists?(name, kind, namespace, version)
+
+            continue
           end
+
+          resource = @client.api(version).resource(kind).get(name, namespace: namespace)
+          return if block.call(resource)
         rescue Exception => e
-          raise e if retries > 100
+          raise e if retries > max_retries
 
           retries += 1
         end
@@ -61,10 +67,10 @@ module GKE
         counter += interval
       end
     end
-    # rubocop:enable Metrics/MethodLength,Lint/RescueException,Metrics/AbcSize,Metrics/CyclomaticComplexity
+    # rubocop:enable Lint/RescueException,Metrics/CyclomaticComplexity
 
     # kubectl is used to apply a manifest
-    # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
+    # rubocop:disable Metrics/AbcSize
     def kubectl(manifest)
       resource = K8s::Resource.from_json(YAML.safe_load(manifest).to_json)
       raise ArgumentError, 'no api version associated to resource' unless resource.apiVersion
@@ -80,7 +86,7 @@ module GKE
 
       @client.api(version).resource("#{kind}s", namespace: namespace).create_resource(resource)
     end
-    # rubocop:enable Metrics/AbcSize,Metrics/MethodLength
+    # rubocop:enable Metrics/AbcSize
 
     # account returns the credentials for a service account
     def account(name, namespace = 'kube-system')
@@ -103,5 +109,5 @@ module GKE
       raise Exception, 'timed out waiting for the kube api'
     end
   end
-  # rubocop:enable Metrics/LineLength
+  # rubocop:enable Metrics/LineLength,Metrics/MethodLength,Metrics/ParameterLists
 end

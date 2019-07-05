@@ -71,31 +71,3 @@ DEFAULT_CLUSTER_ADMIN_BINDING = <<~YAML
     name: sysadmin
     namespace: kube-system
 YAML
-
-DEFAULT_BOOTSTRAP_JOB = <<-YAML
-  apiVersion: batch/v1
-  kind: Job
-  metadata:
-    name: bootstrap
-    namespace: kube-system
-  spec:
-    backoffLimit: 20
-    template:
-      spec:
-        serviceAccountName: sysadmin
-        restartPolicy: OnFailure
-        containers:
-        - name: bootstrap
-          image: quay.io/appvia/hub-bootstrap:latest
-          imagePullPolicy: Always
-          env:
-          - name: CONFIG_DIR
-            value: /config
-          volumeMounts:
-          - name: bundle
-            mountPath: /config/bundles
-        volumes:
-        - name: bundle
-          configMap:
-            name: bootstrap-bundle
-YAML

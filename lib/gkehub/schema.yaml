@@ -1,0 +1,421 @@
+---
+definitions: {}
+$schema: http://json-schema.org/draft-07/schema#
+$id: http://appvia.io/gkehub.json
+type: object
+title: GKE Cluster Configuration
+required:
+  - description
+  - domain
+  - name
+
+properties:
+  authorized_master_cidrs:
+    $id: '#/properties/authorized_master_cidrs'
+    type: array
+    title: Master Authorized Networks
+    items:
+      $id: '#/properties/authorized_master_cidrs/items'
+      type: object
+      title: Networks
+      required:
+        - name
+        - cidr
+      properties:
+        name:
+          $id: '#/properties/authorized_master_cidrs/items/properties/name'
+          type: string
+          title: Display Name
+          default: 'allowany'
+          examples:
+            - any
+          pattern: ^(.*)$
+        cidr:
+          $id: '#/properties/authorized_master_cidrs/items/properties/cidr'
+          type: string
+          title: Network CIDR
+          default: '0.0.0.0/0'
+          examples:
+            - 0.0.0.0/0
+          pattern: ^([0-9]{1.3}\.){3}\.[0-9]{1.3}/[0-9]{2}$
+
+  cluster_ipv4_cidr:
+    $id: '#/properties/cluster_ipv4_cidr'
+    type: string
+    title: Cluster Pod Network
+    default: ''
+    description: >
+      An optional network CIDR which is used to place the pod network on
+      (else the cloud provider chooses)
+    examples:
+      - ''
+    pattern: ^([0-9]{1.3}\.){3}\.[0-9]{1.3}/[0-9]{2}$
+
+  create_subnetwork:
+    $id: '#/properties/create_subnetwork'
+    type: boolean
+    title: Create Subnetwork
+    description: >
+      Indicates if you wish to create a new subnetwork to place the
+      compute node on to.
+    default: false
+    examples:
+      - true
+      - false
+
+  domain:
+    $id: '#/properties/domain'
+    type: string
+    title: Cloud DNS Domains
+    default: ''
+    description: >
+      The dns domain which the cluster is using; this mist be accessible from
+      with inside the project.
+    examples:
+      - 'example.com'
+
+  disk_size_gb:
+    $id: '#/properties/disk_size_gb'
+    type: integer
+    title: Compute Disk Size (GB)
+    default: 100
+    description: >
+      Is the size of the disk used by the compute nodes
+      The dns domain which the cluster is using; this mist be accessible from
+      with inside the project.
+    examples:
+      - 100
+
+  enable_autorepair:
+    $id: '#/properties/enable_autorepair'
+    type: boolean
+    title: Node Autorepair
+    default: true
+    description: >
+      Indicates if the cluster should be configured with auto repair
+      is enabled
+    examples:
+      - true
+      - false
+
+  enable_autoscaler:
+    $id: '#/properties/enable_autoscaler'
+    type: boolean
+    title: Cluster Autoscaling
+    default: true
+    description: >
+      Indicates if the cluster shoyld be configured with cluster autoscaling
+      turned on
+    examples:
+      - true
+      - false
+
+  enable_autoupgrade:
+    $id: '#/properties/enable_autoupgrade'
+    type: boolean
+    title: Cluster Autoupgrading
+    default: true
+    description: >
+      Indicates if the cluster should be configured with autograding
+      switched on
+    examples:
+      - true
+      - false
+
+  enable_binary_authorization:
+    $id: '#/properties/enable_binary_authorization'
+    type: boolean
+    title: Binary Authorization Service
+    default: false
+    description: >
+      Indicates if the cluster should be configured with GKE Binary
+      Authorization service enabled.
+    examples:
+      - true
+      - false
+
+  enable_horizontal_pod_autoscaler:
+    $id: '#/properties/enable_horizontal_pod_autoscaler'
+    type: boolean
+    title: Horizontal Pod Autoscaler
+    default: false
+    description: >
+      Indicates if the cluster should be configured with the horizontal
+      pod autoscaler addon enabled.
+    examples:
+      - true
+      - false
+
+  enable_http_loadbalancer:
+    $id: '#/properties/enable_http_loadbalancer'
+    type: boolean
+    title: HTTP Ingress Controller
+    default: true
+    description: >
+      Indicates if the cluster should have the http loadbalancer enabled
+      in the cluster.
+    examples:
+      - true
+      - false
+
+  enable_istio:
+    $id: '#/properties/enable_istio'
+    type: boolean
+    title: Istion Service Mesh
+    default: false
+    description: >
+      Indicates if the Istio cluster addon is enabled and deployed
+      in the cluster
+    examples:
+      - false
+
+  enable_logging:
+    $id: '#/properties/enable_logging'
+    type: boolean
+    title: Stackdriver Logging
+    default: true
+    description: >
+      Indicates if Stackdriver metrics should be enabled for the cluster
+    examples:
+      - true
+      - false
+
+  enable_monitoring:
+    $id: '#/properties/enable_monitoring'
+    type: boolean
+    title: Stackdriver Metrics
+    default: true
+    description: >
+      Indicates if Stackdriver logging should be enabled for the cluster
+    examples:
+      - true
+      - false
+
+  enable_network_polices:
+    $id: '#/properties/enable_network_polices'
+    type: boolean
+    title: Network Policies Enforcement
+    default: true
+    description: >
+      Indicates if network policies via Calico is enabled in the cluster
+    examples:
+      - true
+      - false
+
+  enable_pod_security_policies:
+    $id: '#/properties/enable_pod_security_polices'
+    type: boolean
+    title: Pod Security Policies
+    default: true
+    description: >
+      Indicates is pod security policies should be enabled in the cluster.
+    examples:
+      - true
+      - false
+
+  enable_private_endpoint:
+    $id: '#/properties/enable_private_endpoint'
+    type: boolean
+    title: Private Endpoints
+    default: false
+    description: >
+      Indicates if the master api endpoint should be accessible from private
+      network only i.e. no external access
+    examples:
+      - false
+      - true
+
+  enable_private_network:
+    $id: '#/properties/enable_private_network'
+    type: boolean
+    title: Private Node Networking
+    default: true
+    description: >
+      Indicates if compute nodes should have external ip addresses or use
+      private networking and a cloud-nat device.
+    examples:
+      - false
+      - true
+
+  image_type:
+    $id: '#/properties/image_type'
+    type: string
+    title: Machine Image
+    default: 'COS'
+    description: >
+      The operating system image the compute pool should use.
+    examples:
+      - COS
+    pattern: ^(.*)$
+
+  github_client_id:
+    $id: '#/properties/github_client_id'
+    type: string
+    title: Github Client ID
+    default: ''
+    description: >
+      The Github client id for the oauth2 application
+    examples:
+      - ''
+    pattern: ^(.*)$
+
+  github_client_secret:
+    $id: '#/properties/github_client_secret'
+    type: string
+    title: Github Client Secret
+    default: ''
+    description: >
+      The Github client secret taken from the oauth2 application
+    examples:
+      - ''
+    pattern: ^(.*)$
+
+  grafana_hostname:
+    $id: '#/properties/grafana_hostname'
+    type: boolean
+    title: Grafana Hostname
+    default: 'grafana'
+    description: >
+      The name of the grafana dns hostname
+    examples:
+      - grafana
+      - metrics
+
+  grafana_disk_size:
+    $id: '#/properties/grafana_disk_size'
+    type: integer
+    title: Grafana Disk Size
+    default: 10
+    description: >
+      The size of the disk used for grafana instance
+    examples:
+      - 10
+      - 100
+
+  machine_type:
+    $id: '#/properties/machine_type'
+    type: string
+    title: Machine Type
+    default: 'n1-standard-1'
+    description: >
+      The GCP machine type which the default nodes pool should use.
+    examples:
+      - n1-standard-1
+    pattern: ^(.*)$
+
+  maintenance_window:
+    $id: '#/properties/maintenance_window'
+    type: string
+    title: Maintenance Window
+    default: '03:00'
+    description: >
+      Specifies the maintenance window in hours and minutes which GKE
+      is permitted to run maintenance operations.
+    examples:
+      - '03:00'
+    pattern: ^[0-9{2}:[0-9]{2}$
+
+  master_ipv4_cidr_block:
+    $id: '#/properties/master_ipv4_cidr_block'
+    type: string
+    title: Master Peer Network Block
+    default: '172.16.0.0/28'
+    description: >
+      If private networking is enabled, this is the peering subnet used
+      to to GKE master api layer. Note, this must be unique within the
+      network.
+    examples:
+      - '172.16.0.0/28'
+    pattern: ^([0-9]{1.3}\.){3}\.[0-9]{1.3}/[0-9]{2}$
+
+  max_nodes:
+    $id: '#/properties/max_nodes'
+    type: integer
+    title: Max Nodes
+    default: 10
+    description: >
+      Assuming the autoscaler is enabled this is the maximum number
+      nodes permitted.
+    examples:
+      - 10
+
+  network:
+    $id: '#/properties/network'
+    type: string
+    title: GCP Network
+    default: 'default'
+    description: >
+      The GCP network which the cluster should reside on, which have
+      to be unique within the GCP project and created beforehand.
+    examples:
+      - 'default'
+    pattern: ^(.*)$
+
+  preemptible:
+    $id: '#/properties/preemptible'
+    type: boolean
+    title: Preemptible Nodes
+    default: false
+    description: >
+      Indicates if the default pool created should use preemptible nodes.
+    examples:
+      - false
+      - true
+
+  region:
+    $id: '#/properties/region'
+    type: string
+    title: GCP Region
+    default: 'europe-west2'
+    description: >
+      The GCP region which the cluster will reside within (europe-west2 etc)
+    examples:
+      - europe-west2
+    pattern: ^(.*)$
+
+  services_ipv4_cidr:
+    $id: '#/properties/services_ipv4_cidr'
+    type: string
+    title: Cluster Services CIDR
+    default: ''
+    description: >
+      An optional network cidr configured for the cluster services,
+      otherwise GCP will decide.
+    examples:
+      - ''
+    pattern: ^([0-9]{1.3}\.){3}\.[0-9]{1.3}/[0-9]{2}$
+
+  size:
+    $id: '#/properties/size'
+    type: integer
+    title: Initial Node Size
+    default: 1
+    description: >
+      The number of nodes per zone which should exist in the cluster.
+    examples:
+      - 1
+      - 10
+
+  subnetwork:
+    $id: '#/properties/subnetwork'
+    type: string
+    title: Subnetwork for Nodes
+    default: 'default'
+    description: >
+      The name of the GCP subnetwork which the cluster nodes should reside.
+    examples:
+      - default
+    pattern: ^(.*)$
+
+  version:
+    $id: '#/properties/version'
+    type: string
+    title: Initial Kubernetes Version
+    default: 'latest'
+    description: >
+      The initial kubernetes version which the cluster should be
+      configured with.
+    examples:
+      - latest
+      - 1.13.7-gke.8
+    pattern: ^(.*)$

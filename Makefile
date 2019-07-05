@@ -16,7 +16,7 @@ build:
 
 docker:
 	@echo "--> Builing the docker image: ${REGISTRY}/${AUTHOR}/${NAME}:${VERSION}"
-	(cd docker && docker build -t ${REGISTRY}/${AUTHOR}/${NAME}:${VERSION} .)
+	@(cd docker && docker build -t ${REGISTRY}/${AUTHOR}/${NAME}:${VERSION} .)
 
 push:
 	@echo "--> Pushing the image to respository"

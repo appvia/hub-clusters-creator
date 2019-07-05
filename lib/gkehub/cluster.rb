@@ -173,6 +173,5 @@ module GKE
     end
     # rubocop:enable Metrics/AbcSize
   end
-  # rubocop:enable
 end
 # rubocop:enable Metrics/LineLength,Metrics/ModuleLength,Metrics/MethodLength

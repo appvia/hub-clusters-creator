@@ -17,8 +17,8 @@
 
 require 'google/apis/compute_v1'
 require 'google/apis/container_v1beta1'
+require 'google/apis/dns_v1'
 require 'googleauth'
-require 'pp'
 
 module GKE
   # Auth is the authentication code
@@ -39,12 +39,13 @@ end
 
 module GKE
   # Compute are a collection of methods used to interact with GCP
-  # rubocop:disable Metrics/LineLength,Metrics/ClassLength
+  # rubocop:disable Metrics/ClassLength,Metrics/LineLength,Metrics/MethodLength
   class Compute
     include GKE::Auth
 
     Container = Google::Apis::ContainerV1beta1
     Compute = Google::Apis::ComputeV1
+    Dns = Google::Apis::DnsV1
 
     attr_accessor :project, :region, :authorizer
 
@@ -54,9 +55,11 @@ module GKE
       @region = region
       @compute = Compute::ComputeService.new
       @gke = Container::ContainerService.new
+      @dns = Dns::DnsService.new
 
       @compute.authorization = authorize
       @gke.authorization = authorize
+      @dns.authorization = authorize
     end
 
     # create is used to create a gke cluster
@@ -77,8 +80,8 @@ module GKE
       @compute.patch_router(@project, @region, name, router)
     end
 
-    # default_nat returns a default cloud nat configuration
-    def default_nat(name = 'cloud-nat')
+    # default_cloud_nat returns a default cloud nat configuration
+    def default_cloud_nat(name = 'cloud-nat')
       [
         Google::Apis::ComputeV1::RouterNat.new(
           log_config: Google::Apis::ComputeV1::RouterNatLogConfig.new(enable: false, filter: 'ALL'),
@@ -90,7 +93,7 @@ module GKE
     end
 
     # hold_for_operation is responisble for waiting for an operation to complete or error
-    # rubocop:disable Metrics/MethodLength,Lint/RescueException
+    # rubocop:disable Lint/RescueException
     def hold_for_operation(id, interval = 10, timeout = 900)
       max_attempts = timeout / interval
       retries = attempts = 0
@@ -110,7 +113,7 @@ module GKE
 
       raise Exception, "operation: #{id} has timed out waiting to finish"
     end
-    # rubocop:enable Metrics/MethodLength,Lint/RescueException
+    # rubocop:enable Lint/RescueException
 
     # operation returns the current status of an operation
     def operation(id)
@@ -177,6 +180,58 @@ module GKE
       subnets(network).include?(name)
     end
 
+    # dns is responsible for adding / updating a dns record in a zone
+    def dns(src, dest, zone, record = 'A')
+      raise ArgumentError, "the managed zone: #{zone} does not exist" unless domain?(zone)
+
+      hostname = "#{src}.#{zone}."
+
+      change = Google::Apis::DnsV1::Change.new(
+        additions: [
+          Google::Apis::DnsV1::ResourceRecordSet.new(
+            kind: 'dns#resourceRecordSet',
+            name: hostname,
+            rrdatas: [dest],
+            ttl: 120,
+            type: record
+          )
+        ]
+      )
+
+      # @step: check a record already exists and if so add for deletion
+      dns_records(zone).rrsets.each do |x|
+        next unless x.name == hostname
+
+        change.deletions = [x]
+      end
+
+      managed_zone = domain(zone)
+      @dns.create_change(@project, managed_zone.name, change)
+    end
+
+    # dns_records returns a list of dns recordsets
+    def dns_records(zone)
+      raise ArgumentError, "the managed zone: #{zone} does not exist" unless domain?(zone)
+
+      managed_zone = domain(zone)
+      @dns.list_resource_record_sets(@project, managed_zone.name)
+    end
+
+    # domain? checks if the domain exists
+    def domain?(name)
+      domains.map { |x| x.dns_name.chomp('.') }.include?(name)
+    end
+
+    # domain returns a specific domain
+    def domain(name)
+      domains.select { |x| x.dns_name.chomp('.') == name }.first
+    end
+
+    # domains provides a list of domains
+    def domains
+      @dns.list_managed_zones(@project).managed_zones
+    end
+
     # subnets returns a list of subnets in the network
     def subnets(network)
       list = @compute.list_subnetworks(@project, @region).items.select do |x|
@@ -206,5 +261,5 @@ module GKE
       list
     end
   end
-  # rubocop:enable Metrics/LineLength,Metrics/ClassLength
+  # rubocop:enable Metrics/ClassLength,Metrics/LineLength,Metrics/MethodLength
 end

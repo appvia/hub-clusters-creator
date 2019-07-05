@@ -30,7 +30,7 @@ module GKE
     end
 
     # BootstrapError is thrown when we've encountered an error attempting to bootstrap cluster
-    class BootstrapError
+    class BootstrapError < StandardError
       def initialize(msg = 'failed attempting to bootstrap the cluster')
         super(msg)
       end
