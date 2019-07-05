@@ -142,6 +142,10 @@ module GKE
           end
         end
       end
+
+      info 'provisioning a dns entry for the master api'
+      compute.dns(kubeapi_name(config).to_s, cluster.endpoint, config[:domain])
+
       cluster
     end
     # rubocop:enable MetricsMetrics/AbcSize
@@ -191,6 +195,7 @@ module GKE
       # @step: validate the options
       info "validating the configurable options for the cluster: '#{name}'"
       config = validate_cluster_options(defaults.merge(options))
+      domain = config[:domain]
 
       # @step: check if the cluster already exists, else create it
       begin
@@ -229,6 +234,7 @@ module GKE
           ca: cluster.master_auth.cluster_ca_certificate,
           cluster_cidr: cluster.ip_allocation_policy.cluster_ipv4_cidr_block,
           endpoint: "https://#{cluster.endpoint}",
+          dnsname: "https://#{kubeapi_name(config)}.#{domain}",
           locations: cluster.locations,
           network: config[:network],
           service_cidr: cluster.ip_allocation_policy.services_ipv4_cidr_block,
@@ -247,6 +253,11 @@ module GKE
 
     private
 
+    # kubeapi_name returns the hostname for the kubernetes master api for this config
+    def kubeapi_name(config)
+      "#{config[:name]}-kubeapi"
+    end
+
     # generate_bootstrap_config returns the helm values for grafana
     def generate_bootstrap_config(options)
       template = <<~YAML
@@ -264,6 +275,8 @@ module GKE
           grafana.yaml: |
             loki:
               enabled: true
+              networkPolicy:
+                enabled: true
             promtail:
               enabled: true
             prometheus:
@@ -292,7 +305,7 @@ module GKE
                 enabled: true
                 accessModes:
                   - ReadWriteOnce
-                size: <%= context[:grafana_disk_size] %>Gi
+                size: <%= context[:grafana_disk_size] %><%= context[:grafana_disk_size].to_s.end_with?('Gi') ? '' : 'Gi' %>
               grafana.ini:
                 paths:
                   data: /var/lib/grafana/data
