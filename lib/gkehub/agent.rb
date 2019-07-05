@@ -23,6 +23,7 @@ require 'kube'
 require 'logging'
 require 'policies'
 require 'template'
+require "json-schema"
 
 module GKE
   # Agent is the main agent class
@@ -81,9 +82,11 @@ module GKE
     # validate_cluster_options is responsible for validating the options for cluster creation
     # rubocop:disable MetricsMetrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
     def validate_cluster_options(config)
-      raise ArgumentError, 'you must specify a cluster description' unless config[:description]
-      raise ArgumentError, 'you must specify a cluster name' unless config[:name]
-      raise ArgumentError, 'you must specify a domain to use' unless config[:domain]
+      begin
+        JSON::Validator.validate!(schema.to_json, config)
+      rescue JSON::Schema::ValidationError => e
+        raise ArgumentError, "invalid configuration: #{e}"
+      end
       raise ArgumentError, "domain: #{config[:domain]} does not exist within project" unless compute.domain?(config[:domain])
       raise ArgumentError, 'disk size must be positive' unless config[:disk_size_gb].positive?
       raise ArgumentError, 'invalid maintenance window should be HH:MM' unless config[:maintenance_window] =~ /^[0-9]{2}:[0-9]{2}$/
