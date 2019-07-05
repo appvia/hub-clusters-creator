@@ -285,7 +285,7 @@ module GKE
                 targetPort: 3000
               ingress:
                 enabled: true
-                path: /
+                path: ''
                 hosts:
                   - <%= context[:grafana_hostname] %>
               persistence:
