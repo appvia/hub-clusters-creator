@@ -45,8 +45,8 @@ module GKE
     end
 
     # wait is used to poll until a resource meets the needs of the consumer
-    # rubocop:disable Lint/RescueException,Metrics/CyclomaticComplexity
-    def wait(name, namespace, kind, version: 'v1', max_retries: 100, timeout: 300, interval: 5, &block)
+    # rubocop:disable Lint/RescueException,Metrics/CyclomaticComplexity,Metrics/AbcSize
+    def wait(name, namespace, kind, version: 'v1', max_retries: 50, timeout: 300, interval: 5, &block)
       retries = counter = 0
       while counter < timeout
         begin
@@ -66,8 +66,10 @@ module GKE
         sleep(interval)
         counter += interval
       end
+
+      raise Exception, 'operation has failed'
     end
-    # rubocop:enable Lint/RescueException,Metrics/CyclomaticComplexity
+    # rubocop:enable Lint/RescueException,Metrics/CyclomaticComplexity,Metrics/AbcSize
 
     # kubectl is used to apply a manifest
     # rubocop:disable Metrics/AbcSize

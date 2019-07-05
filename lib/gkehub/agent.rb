@@ -157,9 +157,13 @@ module GKE
       kube.kubectl(generate_bootstrap_job)
 
       info 'waiting for the bootstrapper to complete successfully'
-      kube.wait(BOOTSTRAP_NAME, BOOTSTRAP_NAMESPACE, 'jobs', version: 'batch/v1', interval: 10) do |x|
+      name = BOOTSTRAP_NAME
+      namespace = BOOTSTRAP_NAMESPACE
+
+      kube.wait(name, namespace, 'jobs', version: 'batch/v1', interval: 10, timeout: 500) do |x|
         x.status.nil? || x.status['succeeded'] <= 0 ? false : true
       end
+      info 'bootstrap has successfully completed'
 
       info 'attempting to add or update dns record for grafana'
       name = 'pining-mastiff-grafana'
@@ -262,9 +266,12 @@ module GKE
               enabled: true
             promtail:
               enabled: true
+            prometheus:
+              enabled: false
+              server:
+                fullnameOverride: prometheus-server
             grafana:
               enabled: true
-              replicas: 1
               sidecar:
                 datasources:
                   enabled: true
@@ -274,14 +281,14 @@ module GKE
                 targetPort: 3000
               ingress:
                 enabled: true
-                path: /*
+                path: /
                 hosts:
                   - <%= context[:grafana_hostname] %>
               persistence:
                 enabled: true
                 accessModes:
                   - ReadWriteOnce
-                size: <%= context[:grafana_disk_size] || '10Gi' %>
+                size: <%= context[:grafana_disk_size] %>Gi
               grafana.ini:
                 paths:
                   data: /var/lib/grafana/data
@@ -294,10 +301,12 @@ module GKE
                   mode: console
                 grafana_net:
                   url: https://grafana.net
-                <%- if context[:github_client_id] -%>
+                <%- unless context[:github_client_id].empty? -%>
                 auth.github:
                   allow_sign_up: true
-                  allowed_organizations: %<= context[:github_organization] %>
+                  <%- unless context[:github_organization].empty? %>
+                  allowed_organizations: <%= context[:github_organization] %>
+                  <%- end %>
                   api_url: https://api.github.com/user
                   auth_url: https://github.com/login/oauth/authorize
                   client_id: <%= context[:github_client_id] %>
@@ -306,10 +315,6 @@ module GKE
                   scopes: user,read:org
                   token_url: https://github.com/login/oauth/access_token
                 <%- end -%>
-            prometheus:
-              enabled: <%= context[:enable_grafana_prometheus] || 'true' %>
-              server:
-                fullnameOverride: prometheus-server
       YAML
       Template::Render.new(options).render(template)
     end
