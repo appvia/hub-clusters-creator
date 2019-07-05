@@ -169,6 +169,7 @@ module GKE
       kube.wait(name, namespace, 'ingresses', version: 'extensions/v1beta1') do |x|
         x.status.loadBalancer.ingress.empty? ? false : true
       end
+      info 'grafana ingress has been provisioned'
       ingress = kube.get(name, namespace, 'ingresses', version: 'extensions/v1beta1')
       address = ingress.status.loadBalancer.ingress.first.ip
 
@@ -300,7 +301,7 @@ module GKE
                   api_url: https://api.github.com/user
                   auth_url: https://github.com/login/oauth/authorize
                   client_id: <%= context[:github_client_id] %>
-                  client_secret: <%= config[:github_client_secret] %>
+                  client_secret: <%= context[:github_client_secret] %>
                   enabled: true
                   scopes: user,read:org
                   token_url: https://github.com/login/oauth/access_token
