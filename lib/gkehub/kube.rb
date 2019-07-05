@@ -67,7 +67,7 @@ module GKE
         counter += interval
       end
 
-      raise Exception, 'operation has failed'
+      raise Exception, "operation waiting for #{name}/${namespace/#{kind} has failed"
     end
     # rubocop:enable Lint/RescueException,Metrics/CyclomaticComplexity,Metrics/AbcSize
 
