@@ -24,6 +24,7 @@ Gem::Specification.new do |s|
   s.add_dependency('colorize')
   s.add_dependency('google-api-client')
   s.add_dependency('googleauth')
+  s.add_dependency('json-schema')
   s.add_dependency('k8s-client')
   s.add_dependency('stringio')
 end
