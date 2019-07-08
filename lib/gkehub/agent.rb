@@ -23,7 +23,7 @@ require 'kube'
 require 'logging'
 require 'policies'
 require 'template'
-require "json-schema"
+require 'json-schema'
 
 module GKE
   # Agent is the main agent class
@@ -235,12 +235,9 @@ module GKE
         },
         cluster: {
           ca: cluster.master_auth.cluster_ca_certificate,
-          cluster_cidr: cluster.ip_allocation_policy.cluster_ipv4_cidr_block,
           endpoint: "https://#{cluster.endpoint}",
           dnsname: "https://#{kubeapi_name(config)}.#{domain}",
           locations: cluster.locations,
-          network: config[:network],
-          service_cidr: cluster.ip_allocation_policy.services_ipv4_cidr_block,
           token: k.account('sysadmin'),
           type: 'regional'
         },

@@ -7,7 +7,7 @@ require 'version'
 
 # rubocop:disable Metrics/LineLength
 Gem::Specification.new do |s|
-  s.name        = 'gkehub'
+  s.name        = 'gke-hub'
   s.version     = GKE::VERSION
   s.platform    = Gem::Platform::RUBY
   s.date        = '2019-08-02'
