@@ -25,10 +25,12 @@ region = 'europe-west2'
 project = 'gke-learning-242311'
 
 c = GKE::Provision.new(account, project, region, true)
-#puts c.defaults
 puts c.provision(
   description: 'just a test',
   domain: 'gkelearning.appvia.io',
+  github_client_id: ENV['GITHUB_CLIENT_ID'],
+  github_client_secret: ENV['GITHUB_CLIENT_SECRET'],
+  github_organization: 'appvia-test',
   grafana_hostname: 'grafana.gkelearning.appvia.io',
   grafana_ingress: true,
   logging: true,
