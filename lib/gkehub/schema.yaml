@@ -1,7 +1,4 @@
 ---
-definitions: {}
-$schema: http://json-schema.org/draft-07/schema#
-$id: http://appvia.io/gkehub.json
 type: object
 title: GKE Cluster Configuration
 required:
@@ -38,7 +35,7 @@ properties:
           default: '0.0.0.0/0'
           examples:
             - 0.0.0.0/0
-          pattern: ^([0-9]{1.3}\.){3}[0-9]{1.3}/[0-9]{2}$
+          pattern: ^([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}$
 
   cluster_ipv4_cidr:
     $id: '#/properties/cluster_ipv4_cidr'
@@ -51,7 +48,7 @@ properties:
       (else the cloud provider chooses)
     examples:
       - ''
-    pattern: ^([0-9]{1.3}\.){3}[0-9]{1.3}/[0-9]{2}$
+    pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
 
   create_subnetwork:
     $id: '#/properties/create_subnetwork'
@@ -63,8 +60,8 @@ properties:
       compute node on to.
     default: false
     examples:
-      - true
       - false
+      - true
 
   domain:
     $id: '#/properties/domain'
@@ -101,8 +98,8 @@ properties:
       Indicates if the cluster should be configured with auto repair
       is enabled
     examples:
-      - true
       - false
+      - true
 
   enable_autoscaler:
     $id: '#/properties/enable_autoscaler'
@@ -111,11 +108,11 @@ properties:
     title: Cluster Autoscaling
     default: true
     description: >
-      Indicates if the cluster shoyld be configured with cluster autoscaling
+      Indicates if the cluster should be configured with cluster autoscaling
       turned on
     examples:
-      - true
       - false
+      - true
 
   enable_autoupgrade:
     $id: '#/properties/enable_autoupgrade'
@@ -125,10 +122,11 @@ properties:
     default: true
     description: >
       Indicates if the cluster should be configured with autograding
-      switched on
+      enabled; meaning both nodes are masters are autoscated scheduled
+      to upgrade during your maintenance window.
     examples:
-      - true
       - false
+      - true
 
   enable_binary_authorization:
     $id: '#/properties/enable_binary_authorization'
@@ -140,8 +138,8 @@ properties:
       Indicates if the cluster should be configured with GKE Binary
       Authorization service enabled.
     examples:
-      - true
       - false
+      - true
 
   enable_horizontal_pod_autoscaler:
     $id: '#/properties/enable_horizontal_pod_autoscaler'
@@ -150,11 +148,13 @@ properties:
     title: Horizontal Pod Autoscaler
     default: false
     description: >
-      Indicates if the cluster should be configured with the horizontal
-      pod autoscaler addon enabled.
+      Indicates if the cluster is configured with the horizontal
+      pod autoscaler addon. This automatically adjusts the cpu and
+      memory resources of pods in accordances with their demand. You
+      should ensure you use PodDisruptionBudgets if this is enabled.
     examples:
-      - true
       - false
+      - true
 
   enable_http_loadbalancer:
     $id: '#/properties/enable_http_loadbalancer'
@@ -163,11 +163,12 @@ properties:
     title: HTTP Ingress Controller
     default: true
     description: >
-      Indicates if the cluster should have the http loadbalancer enabled
-      in the cluster.
+      Indicates if the cluster should be configured with the GKE
+      ingress controller. When enabled GKE will autodiscover your
+      ingress resources and provision load balancer on your behalf.
     examples:
-      - true
       - false
+      - true
 
   enable_istio:
     $id: '#/properties/enable_istio'
@@ -176,10 +177,12 @@ properties:
     title: Istion Service Mesh
     default: false
     description: >
-      Indicates if the Istio cluster addon is enabled and deployed
-      in the cluster
+      Indicates if the GKE Istio service mesh is deployed to the
+      cluster; this provides a more feature rich routing and
+      instrumentation.
     examples:
       - false
+      - true
 
   enable_logging:
     $id: '#/properties/enable_logging'
@@ -190,8 +193,8 @@ properties:
     description: >
       Indicates if Stackdriver metrics should be enabled for the cluster
     examples:
-      - true
       - false
+      - true
 
   enable_monitoring:
     $id: '#/properties/enable_monitoring'
@@ -202,8 +205,8 @@ properties:
     description: >
       Indicates if Stackdriver logging should be enabled for the cluster
     examples:
-      - true
       - false
+      - true
 
   enable_network_polices:
     $id: '#/properties/enable_network_polices'
@@ -305,14 +308,15 @@ properties:
   grafana_hostname:
     $id: '#/properties/grafana_hostname'
     tags: ['default']
-    type: boolean
+    type: string
     title: Grafana Hostname
     default: 'grafana'
     description: >
-      The name of the grafana dns hostname
+      The dns hostname which grafana should be configured to respond to.
     examples:
       - grafana
       - metrics
+    pattern: ^(.*)$
 
   grafana_version:
     $id: '#/properties/grafana_version'
@@ -321,7 +325,7 @@ properties:
     title: Grafana Version
     default: '6.2.5'
     description: >
-      The version of the grafana to install
+      The version of the grafana which should be installed.
     examples:
       - 6.2.5
     pattern: ^(.*)$
@@ -349,7 +353,7 @@ properties:
       is permitted to run maintenance operations.
     examples:
       - '03:00'
-    pattern: ^[0-9{2}:[0-9]{2}$
+    pattern: ^[\d]{2}:[\d]{2}$
 
   master_ipv4_cidr_block:
     $id: '#/properties/master_ipv4_cidr_block'
@@ -363,7 +367,7 @@ properties:
       network.
     examples:
       - '172.16.0.0/28'
-    pattern: ^([0-9]{1.3}\.){3}[0-9]{1.3}/[0-9]{2}$
+    pattern: ^([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}$
 
   max_nodes:
     $id: '#/properties/max_nodes'
@@ -425,7 +429,7 @@ properties:
       otherwise GCP will decide.
     examples:
       - ''
-    pattern: ^([0-9]{1.3}\.){3}[0-9]{1.3}/[0-9]{2}$
+    pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
 
   size:
     $id: '#/properties/size'
