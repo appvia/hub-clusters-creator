@@ -1,19 +1,19 @@
 #!/usr/bin/ruby
 # frozen_string_literal: true
 
-$LOAD_PATH.unshift File.join(File.dirname(__FILE__), '.', 'lib/gkehub')
+$LOAD_PATH.unshift File.join(File.dirname(__FILE__), '.', 'lib/hub-clusters-creator')
 
 require 'version'
 
 # rubocop:disable Metrics/LineLength
 Gem::Specification.new do |s|
-  s.name        = 'gke-hub'
+  s.name        = 'hub-clusters-creator'
   s.version     = GKE::VERSION
   s.platform    = Gem::Platform::RUBY
   s.date        = '2019-08-02'
   s.authors     = ['Rohith Jayawardene']
   s.email       = 'gambol99@gmail.com'
-  s.homepage    = 'http://rubygems.org/gems/gkehub'
+  s.homepage    = 'http://rubygems.org/gems/hub-clusters-creator'
   s.summary     = 'An agent used to provision GKE clusters for the Appvia Hub'
   s.description = 'An agent used to provision GKE clusters for the Appvia Hub '
   s.license     = 'GPLV2'
