@@ -80,7 +80,7 @@ module GKE
     end
 
     # validate_cluster_options is responsible for validating the options for cluster creation
-    # rubocop:disable MetricsMetrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
+    # rubocop:disable Metrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
     def validate_cluster_options(config)
       begin
         JSON::Validator.validate!(schema.to_json, config)
@@ -114,10 +114,10 @@ module GKE
 
       config
     end
-    # rubocop:enable MetricsMetrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
+    # rubocop:enable Metrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
 
     # provision_gke is responsible for building the infrastructure
-    # rubocop:disable MetricsMetrics/AbcSize
+    # rubocop:disable Metrics/AbcSize
     def provision_gke(config)
       name = config[:name]
 
@@ -151,7 +151,7 @@ module GKE
 
       cluster
     end
-    # rubocop:enable MetricsMetrics/AbcSize
+    # rubocop:enable Metrics/AbcSize
 
     # provision_bootstrap is responsible for setting up the agents and strapper
     # a) pushes in the configuration for the bootstrapper
