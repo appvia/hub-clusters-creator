@@ -12,7 +12,7 @@ default: build
 
 build:
 	@echo "--> Building the GEM"
-	gem build gkehub.gemspec
+	gem build hub-clusters-creator.gemspec
 
 docker:
 	@echo "--> Builing the docker image: ${REGISTRY}/${AUTHOR}/${NAME}:${VERSION}"
@@ -24,4 +24,5 @@ push:
 
 clean:
 	@echo "--> Performing a cleanup"
-	docker rmi -f ${REGISTRY}/${AUTHOR}/${NAME}:${VERSION}
+	@docker rmi -f ${REGISTRY}/${AUTHOR}/${NAME}:${VERSION} 2>/dev/null
+	@rm -f *.gem

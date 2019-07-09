@@ -15,14 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-$LOAD_PATH.unshift File.join(File.dirname(__FILE__), 'gkehub/')
+$LOAD_PATH.unshift File.join(File.dirname(__FILE__), 'hub-clusters-creator/')
 require 'agent'
 
 module GKE
   # Provision is a wrapper to the agent
   module Provision
     ROOT = __dir__
-    require "#{ROOT}/gkehub/version"
+    require "#{ROOT}/hub-clusters-creator/version"
+
+    puts "#{ROOT}/hub-clusters-creator/version"
 
     def self.version
       GKE::VERSION

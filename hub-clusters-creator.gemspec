@@ -1,31 +1,31 @@
 #!/usr/bin/ruby
 # frozen_string_literal: true
 
-$LOAD_PATH.unshift File.join(File.dirname(__FILE__), '.', 'lib/gkehub')
+# rubocop:disable Metrics/LineLength
+$LOAD_PATH.unshift File.join(File.dirname(__FILE__), '.', 'lib/hub-clusters-creator')
 
 require 'version'
 
-# rubocop:disable Metrics/LineLength
 Gem::Specification.new do |s|
-  s.name        = 'gke-hub'
+  s.name        = 'hub-clusters-creator'
   s.version     = GKE::VERSION
   s.platform    = Gem::Platform::RUBY
   s.date        = '2019-08-02'
   s.authors     = ['Rohith Jayawardene']
   s.email       = 'gambol99@gmail.com'
-  s.homepage    = 'http://rubygems.org/gems/gkehub'
+  s.homepage    = 'http://rubygems.org/gems/hub-clusters-creator'
   s.summary     = 'An agent used to provision GKE clusters for the Appvia Hub'
   s.description = 'An agent used to provision GKE clusters for the Appvia Hub '
-  s.license     = 'GPLV2'
+  s.license     = 'GPL-2.0'
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
   s.executables   = `git ls-files -- bin/*`.split("\n").map { |f| File.basename(f) }
 
-  s.add_dependency('colorize')
-  s.add_dependency('google-api-client')
-  s.add_dependency('googleauth')
-  s.add_dependency('json-schema')
-  s.add_dependency('k8s-client')
-  s.add_dependency('stringio')
+  s.add_dependency('colorize', '~> 0.8')
+  s.add_dependency('google-api-client', '~> 0.30')
+  s.add_dependency('googleauth', '~> 0.7')
+  s.add_dependency('json-schema', '~> 2.8')
+  s.add_dependency('k8s-client', '~> 0.10')
+  s.add_dependency('stringio', '~> 0.0.2')
 end
 # rubocop:enable Metrics/LineLength
