@@ -24,4 +24,5 @@ push:
 
 clean:
 	@echo "--> Performing a cleanup"
-	docker rmi -f ${REGISTRY}/${AUTHOR}/${NAME}:${VERSION}
+	@docker rmi -f ${REGISTRY}/${AUTHOR}/${NAME}:${VERSION} 2>/dev/null
+	@rm -f *.gem
