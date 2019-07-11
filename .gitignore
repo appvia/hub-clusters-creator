@@ -1,3 +1,4 @@
 *.swp
 *.gem
 account.json
+github.env

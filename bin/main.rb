@@ -18,7 +18,7 @@
 #
 $LOAD_PATH.unshift File.join(File.dirname(__FILE__), '.', '../lib')
 
-require 'gkehub'
+require 'hub-clusters-creator'
 
 account = File.read('account.json')
 region = 'europe-west2'

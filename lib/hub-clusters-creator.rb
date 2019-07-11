@@ -24,8 +24,6 @@ module GKE
     ROOT = __dir__
     require "#{ROOT}/hub-clusters-creator/version"
 
-    puts "#{ROOT}/hub-clusters-creator/version"
-
     def self.version
       GKE::VERSION
     end
