@@ -286,6 +286,10 @@ module GKE
               server:
                 fullnameOverride: prometheus-server
             grafana:
+              adminUser: admin
+              <%- unless context[:grafana_password].empty? %>
+              adminPassword: <%= context[:grafana_password] %>
+              <%- end %>
               enabled: true
               image:
                 repository: grafana/grafana

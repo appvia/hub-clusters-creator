@@ -294,8 +294,20 @@ properties:
       - ''
     pattern: ^(.*)$
 
+  grafana_admin_password:
+    $id: '#/properties/grafana_admin_password'
+    tags: ['default']
+    type: string
+    title: Grafana Admin Password
+    default: ''
+    description: >
+      The password for the default admin user created in grafana
+    pattern: ^(.*)$
+
+
   grafana_disk_size:
     $id: '#/properties/grafana_disk_size'
+    tags: ['advanced']
     type: integer
     title: Grafana Disk Size
     default: 10
