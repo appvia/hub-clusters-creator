@@ -186,7 +186,7 @@ module GKE
 
       # @step: update the dns record for the ingress
       info "adding a dns record for #{config[:grafana_hostname]} => #{address}"
-      compute.dns('grafana', address, config[:domain])
+      compute.dns(config[:grafana_hostname].split('.').first, address, config[:domain])
     end
     # rubocop:enable Metrics/AbcSize
 
