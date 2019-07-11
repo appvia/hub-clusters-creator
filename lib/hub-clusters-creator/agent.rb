@@ -75,7 +75,7 @@ module GKE
     end
 
     # schema returns the json schema defining all the options we support
-    def schema
+    def schema(_provider = 'gke')
       @schema ||= YAML.safe_load(File.read(File.join(File.dirname(__FILE__), 'schema.yaml')))
     end
 
