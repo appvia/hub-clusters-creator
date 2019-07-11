@@ -14,27 +14,23 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 
-# rubocop:disable Metrics/LineLength
-module Clusters
-  # Errors is collection of custom errors and exceptions
-  module Errors
-    # ClusterCreationError defines an error occurred creating or configuring the cluster
-    class ClusterCreationError < StandardError
-      attr_accessor :operation_id
+module GCP
+  # Auth provides authentication to GCP
+  module Auth
+    private
 
-      def initialize(msg = 'failed attempting to create the cluster', operation_id = '')
-        @operation_id = operation_id
-        super(msg)
+    # authorize is responsible for providing an access token to operate
+    def authorize(scopes = ['https://www.googleapis.com/auth/cloud-platform'])
+      if @authorizer.nil?
+        @authorizer = Google::Auth::ServiceAccountCredentials.make_creds(
+          json_key_io: StringIO.new(@account),
+          scope: scopes
+        )
+        @authorizer.fetch_access_token!
       end
-    end
-
-    # BootstrapError is thrown when we've encountered an error attempting to bootstrap cluster
-    class BootstrapError < StandardError
-      def initialize(msg = 'failed attempting to bootstrap the cluster')
-        super(msg)
-      end
+      @authorizer
     end
   end
 end
-# rubocop:enable Metrics/LineLength
