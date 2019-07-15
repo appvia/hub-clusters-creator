@@ -24,8 +24,13 @@ account = File.read('account.json')
 region = 'europe-west2'
 project = 'gke-learning-242311'
 
-c = GKE::Provision.new(account, project, region, true)
-puts c.provision(
+creator = Clusters.new(
+  account: account,
+  provider: 'gcp',
+  project: project,
+  region: region
+)
+puts creator.provision(
   description: 'just a test',
   domain: 'gkelearning.appvia.io',
   github_client_id: ENV['GITHUB_CLIENT_ID'],
@@ -34,6 +39,7 @@ puts c.provision(
   grafana_hostname: ENV['GRAFANA_HOSTNAME'],
   grafana_ingress: true,
   logging: true,
+  machine_type: 'n1-standard-1',
   name: 'test',
   version: '1.13.7-gke.8'
 )

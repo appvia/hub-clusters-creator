@@ -16,21 +16,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-module GCP
-  # Auth provides authentication to GCP
-  module Auth
-    private
+module Clusters
+  module Providers
+    # Azure is the AKS namespace
+    module Azure
+      # Helpers providers a collection of useful methods
+      module Helpers
+        private
 
-    # authorize is responsible for providing an access token to operate
-    def authorize(scopes = ['https://www.googleapis.com/auth/cloud-platform'])
-      if @authorizer.nil?
-        @authorizer = Google::Auth::ServiceAccountCredentials.make_creds(
-          json_key_io: StringIO.new(@account),
-          scope: scopes
-        )
-        @authorizer.fetch_access_token!
+        # resource_group? check is the resource group exists
+        def resource_group?(name, location); end
       end
-      @authorizer
     end
   end
 end

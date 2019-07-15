@@ -19,18 +19,26 @@
 module Clusters
   # Errors is collection of custom errors and exceptions
   module Errors
-    # ClusterCreationError defines an error occurred creating or configuring the cluster
-    class ClusterCreationError < StandardError
-      attr_accessor :operation_id
-
-      def initialize(msg = 'failed attempting to create the cluster', operation_id = '')
-        @operation_id = operation_id
+    # InfrastructureError defines an error occurred creating or configuring the cluster
+    class InfrastructureError < StandardError
+      def initialize(msg = 'failed attempting to create the cluster')
         super(msg)
       end
     end
 
-    # BootstrapError is thrown when we've encountered an error attempting to bootstrap cluster
-    class BootstrapError < StandardError
+    # ConfigurationError defines an error related to configuration
+    class ConfigurationError < StandardError
+      attr_accessor :field, :value
+
+      def initialize(msg = 'invalid configuration', field:, value:)
+        @field = field
+        @value = value
+        super(msg)
+      end
+    end
+
+    # InitializerError is thrown when we've encountered an error attempting to bootstrap cluster
+    class InitializerError < StandardError
       def initialize(msg = 'failed attempting to bootstrap the cluster')
         super(msg)
       end

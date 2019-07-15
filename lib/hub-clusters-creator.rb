@@ -15,21 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-$LOAD_PATH.unshift File.join(File.dirname(__FILE__), 'hub-clusters-creator/')
-require 'agent'
+# $LOAD_PATH.unshift File.join(File.dirname(__FILE__), 'hub-clusters-creator/')
 
-module GKE
-  # Provision is a wrapper to the agent
-  module Provision
-    ROOT = __dir__
-    require "#{ROOT}/hub-clusters-creator/version"
+require 'hub-clusters-creator/agent'
 
-    def self.version
-      GKE::VERSION
-    end
+# Clusters providers the wrapper to the providers
+module Clusters
+  ROOT = __dir__
+  require "#{ROOT}/hub-clusters-creator/version"
 
-    def self.new(account, project, region, logging = false)
-      GKE::Agent.new(account, project, region, logging)
-    end
+  def self.version
+    Clusters::VERSION
+  end
+
+  def self.new(provider)
+    Clusters::Agent.new(provider)
   end
 end
