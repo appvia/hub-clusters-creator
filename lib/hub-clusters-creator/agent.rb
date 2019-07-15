@@ -31,7 +31,8 @@ module Clusters
     include Logging
 
     def initialize(provider)
-      case provider[:provider]
+      @provider_name = provider[:provider]
+      case @provider_name
       when 'gcp'
         @provider = Clusters::Providers::GKE.new(
           account: provider[:account],
@@ -47,7 +48,7 @@ module Clusters
           tenant: provider[:tenant]
         )
       else
-        raise ArgumentError, "cloud provider: #{provider[:provider]} not supported"
+        raise ArgumentError, "cloud provider: #{@provider_name} not supported"
       end
     end
 
@@ -65,8 +66,8 @@ module Clusters
     end
 
     # schema returns the json schema defining all the options we support
-    def schema(provider = 'gcp')
-      @schema ||= YAML.safe_load(File.read("#{ROOT}/hub-clusters-creator/schema.yaml"))
+    def schema(provider = @provider_name)
+      @schema ||= YAML.safe_load(File.read("#{__dir__}/schema.yaml"))
       generated = @schema.dup
       generated['properties'] = @schema['properties'].select do |_name, x|
         x['provider'].include?(provider) || x['provider'].include?('*')
@@ -87,6 +88,7 @@ module Clusters
 
       # @step: provision the cluster if not already there
       begin
+        validate(config)
         @provider.create(config)
       rescue InfrastructureError => e
         error "failed to provision the infrastructure: #{name}, error: #{e}"
@@ -103,6 +105,14 @@ module Clusters
       end
     end
     # rubocop:enable Lint/RescueException
+
+    private
+
+    def validate(config)
+      JsonSchema.parse!(schema).validate(config)
+    rescue StandardError => e
+      raise ConfigurationError, "configuration invalid, error: #{e}"
+    end
   end
 end
 # rubocop:enable Metrics/MethodLength,Metrics/LineLength

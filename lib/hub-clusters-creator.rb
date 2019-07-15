@@ -1,5 +1,8 @@
+# rubocop:disable Naming/FileName
 # frozen_string_literal: true
 
+#
+# rubocop:enable Naming/FileName
 # Copyright (C) 2019  Rohith Jayawardene <gambol99@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
@@ -15,15 +18,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# $LOAD_PATH.unshift File.join(File.dirname(__FILE__), 'hub-clusters-creator/')
-
-require 'hub-clusters-creator/agent'
+require_relative 'hub-clusters-creator/agent'
+require_relative 'hub-clusters-creator/version'
 
 # Clusters providers the wrapper to the providers
 module Clusters
-  ROOT = __dir__
-  require "#{ROOT}/hub-clusters-creator/version"
-
   def self.version
     Clusters::VERSION
   end
