@@ -90,14 +90,13 @@ module Clusters
       end
 
       # create is responsible for building the infrastructure
-      def create(config)
+      def create(name, config)
         # @step: validate the configuration
         begin
           validate(config)
         rescue StandardError => e
           raise ConfigurationError, "invalid configuration, error: #{e}"
         end
-        name = config[:name]
 
         # @step: provision the infrastructure
         begin

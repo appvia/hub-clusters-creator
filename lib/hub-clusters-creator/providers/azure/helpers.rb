@@ -25,7 +25,14 @@ module Clusters
         private
 
         # resource_group? check is the resource group exists
-        def resource_group?(name, location); end
+        def resource_group?(name)
+          resource_groups.map(&:name).include?(name)
+        end
+
+        # resource_groups returns a list of resource groups
+        def resource_groups
+          @client.resource_groups.list
+        end
       end
     end
   end

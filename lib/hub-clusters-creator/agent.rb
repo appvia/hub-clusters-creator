@@ -89,7 +89,7 @@ module Clusters
       # @step: provision the cluster if not already there
       begin
         validate(config)
-        @provider.create(config)
+        @provider.create(name, config)
       rescue InfrastructureError => e
         error "failed to provision the infrastructure: #{name}, error: #{e}"
         raise e

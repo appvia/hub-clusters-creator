@@ -17,15 +17,22 @@
 #
 require 'hub-clusters-creator/providers/azure/helpers'
 require 'hub-clusters-creator/providers/bootstrap'
+require 'hub-clusters-creator/template'
 
 require 'azure_mgmt_resources'
+require 'json'
 
 # rubocop:disable Metrics/ClassLength,Metrics/LineLength,Metrics/MethodLength
 module Clusters
   module Providers
     # AKS is the AKS provider
     class AKS
+      include ::Azure::Resources::Profiles::Latest::Mgmt
+      include ::Azure::Resources::Profiles::Latest::Mgmt::Models
       include Azure::Helpers
+      include Clusters::Utils::Template
+      include Errors
+      include Logging
 
       def initialize(provider)
         @subscription = provider[:subscription]
@@ -33,41 +40,39 @@ module Clusters
         @client_id = provider[:client_id]
         @client_secret = provider[:client_secret]
 
-        provider = MsRestAzure::ApplicationTokenProvider.new(tenant, client, secret)
-        credentials = MsRest::TokenCredentials.new(provider)
-        @client = Azure::ARM::Resources::ResourceManagementClient.new(credentials)
-        @client.subscription_id = @subscription
+        @provider = MsRestAzure::ApplicationTokenProvider.new(@tenant, @client_id, @client_secret)
+        @credentials = MsRest::TokenCredentials.new(@provider)
+
+        options = {
+          tenant_id: @tenant,
+          client_id: @client_id,
+          client_secret: @client_secret,
+          subscription_id: @subscription,
+          credentials: @credentials
+        }
+
+        @client = Client.new(options)
       end
 
       # create is responsible for creating the cluster
-      # rubocop:disable Metrics/AbcSize
-      def create(name, options)
+      def create(name, config)
         # @step: validate the user defined options
-        validate(options)
+        validate(config)
 
-        resource_group = options[:resource_group] || name.to_s
-        resource_group_location = options[:region]
-
-        # ensure the resource group is created
-        params = Azure::ARM::Resources::Models::ResourceGroup.new.tap do |rg|
-          rg.location = resource_group_location
+        # @step: create the infrastructure deployment
+        begin
+          provision_aks(name, config)
+        rescue StandardError => e
+          raise InfrastructureError, "failed to provision cluster, error: #{e}"
         end
-        @client.resource_groups.create_or_update(resource_group, params).value!
 
-        # build the deployment from a json file template from parameters
-        deployment = Azure::ARM::Resources::Models::Deployment.new
-        deployment.properties = Azure::ARM::Resources::Models::DeploymentProperties.new
-        deployment.properties.template = JSON.parse(cluster_template(options))
-        deployment.properties.mode = Azure::ARM::Resources::Models::DeploymentMode::Incremental
-
-        # build the deployment template parameters from Hash to {key: {value: value}} format
-        deploy_params = File.read(File.expand_path(File.join(__dir__, 'parameters.json')))
-        deployment.properties.parameters = JSON.parse(deploy_params)['parameters']
-
-        # put the deployment to the resource group
-        @client.deployments.create_or_update(resource_group, 'azure-sample', deployment)
+        # @step: bootstrap the cluster
+        begin
+          provision_cluster(name, config)
+        rescue StandardError => e
+          raise InfrastructureError, "failed to bootstrap cluster, error: #{e}"
+        end
       end
-      # rubocop:enable Metrics/AbcSize
 
       # delete is responsible for deleting the cluster via resource group
       def delete(group)
@@ -76,10 +81,46 @@ module Clusters
 
       private
 
+      # provision_aks is responsible for provision the infrastructure
+      # rubocop:disable Metrics/AbcSize
+      def provision_aks(name, config)
+        # @step: define the resource group
+        resource_group_name = config[:resource_group] || name.to_s
+
+        # @step: check the resource group exists
+        unless resource_group?(config[:resource_group])
+          info "creating the resource group: #{resource_group_name} in azure"
+          params = ::Azure::Resources::Mgmt::V2019_05_10::Models::ResourceGroup.new.tap do |x|
+            x.location = config[:region]
+          end
+          # ensure the resource group is created
+          @client.resource_groups.create_or_update(resource_group_name, params)
+        end
+
+        # @step: generate the ARM deployments
+        puts cluster_template(config)
+        template = YAML.safe_load(cluster_template(config))
+        puts template.to_json
+
+        # @step: kick off the deployment and cross fingers
+        deployment = ::Azure::Resources::Mgmt::V2019_05_10::Models::Deployment.new
+        deployment.properties = ::Azure::Resources::Mgmt::V2019_05_10::Models::DeploymentProperties.new
+        deployment.properties.template = template.to_json
+        deployment.properties.mode = ::Azure::Resources::Mgmt::V2019_05_10::Models::DeploymentMode::Incremental
+
+        # put the deployment to the resource group
+        @client.deployments.create_or_update(resource_group_name, name, deployment)
+      end
+      # rubocop:enable Metrics/AbcSize
+
+      # provision_cluster is responsible for kicking off the initialization
+      def provision_cluster(name, config); end
+
       # validate is responsible for validating the options
       def validate(options)
-        raise ArgumentError, 'no name specified' unless options[:name]
-        raise ArgumentError, 'no region specified' unless options[:region]
+        %i[name region machine_type ssh_key].each do |x|
+          raise ArgumentError, "you must specify the #{x} options" unless options.key?(x)
+        end
       end
 
       # cluster_template is responsible for rendering the template for ARM
@@ -87,70 +128,64 @@ module Clusters
         template = <<~YAML
           $schema: https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#
           contentVersion: 1.0.0.0
-          parameters:
-            name:
-              defaultValue: <%= config[:name] %>
-              type: String
-            dns:
-              defaultValue: <%= config[:domain] %>
-              type: String
-            kubernetes_version:
-              defaultValue: <%= config[:version] %>
-              type: String
-            location:
-              defaultValue: <%= config[:region] %>
-              type: String
-            service_principal_clientid:
-              type: String
-            service_principal_secret:
-              type: String
-          variables: {}
+          parameters: {}
+          variables:
+            name: '<%= context[:name] %>'
+            disk_size: <%= context[:disk_size_gb] %>
+            domain: '<%= context[:name] %>'
+            location: '<%= context[:region] %>'
+            machine_type: '<%= context[:machine_type] %>'
+            node_size: <%= context[:size] %>
+            services_ipv4_cidr: '<%= context[:services_ipv4_cidr].empty? ? '10.0.0.0/16' : context[:services_ipv4_cidr] %>'
+            service_principal_clientid: 'me'
+            service_principal_secret: 'me'
+            ssh_key: '<%= context[:ssh_key] %>'
+            version: '<%= context[:version] %>'
           resources:
             - type: Microsoft.ContainerService/managedClusters
-              name: "[parameters('name')]"
+              name: \"[variables(\'name\')]\"
               apiVersion: '2019-06-01'
-              location: "[parameters('location')]"
+              location: \"[variables(\'location\')]\"
               tags:
-                cluster: "[parameters('name')]"
+                cluster: \"[variables(\'name\')]\"
               properties:
-                kubernetesVersion: "[parameters('kubernetes_version')]"
-                dnsPrefix: "[parameters('dns')]"
-                apiServerAuthorizedIPRanges: []
+                kubernetesVersion: \"[variables(\'version\')]\"
+                dnsPrefix: \"[variables(\'name\')]\"
                 agentPoolProfiles:
                   - name: compute
-                    count: <%= config[:min_node_count]} %>,
-                    maxPods: <%= config[:max_pods_per_node] %>,
-                    osDiskSizeGB: <%= config[:disk_size_gb] %>,
+                    count: \"[variables(\'node_size\')]\"
+                    maxPods: 110
+                    osDiskSizeGB: \"[variables(\'disk_size\')]\"
                     osType: Linux
                     storageProfile: ManagedDisks
                     type: VirtualMachineScaleSets
-                    vmSize: <%= config[:machine_type] %>
+                    vmSize: \"[variables(\'machine_type\')]\"
                 servicePrincipalProfile:
-                  clientId: "[parameters('service_principal_clientid')]"
-                  secret: "[parameters('service_principal_secret')]"
+                  clientId: \"[variables(\'service_principal_clientid\')]\"
+                  secret: \"[variables(\'service_principal_secret\')]\"
                 linuxProfile:
                   adminUsername: azureuser
-                  <%- unless config[:ssh_key].empty? %>
+                  <%- unless (context[:ssh_key] || '').empty? -%>
                   ssh:
                     publicKeys:
-                      - keyData: <%= config[:ssh_key] %>
-                  <%- end %>
+                      - keyData: \"[variables(\'ssh_key\')]\"
+                  <%- end -%>
                 addonProfiles: {}
                 enableRBAC: true
-                enablePodSecurityPolicy: <%= config[:enable_pod_security_policies] %>
+                enablePodSecurityPolicy: true
                 networkProfile:
                   dnsServiceIP: 10.0.0.10
-                  dockerBridgeCidr: <%= config[:docker_cidr] || '172.17.0.1/16' %>
+                  dockerBridgeCidr: 172.17.0.1/16
                   loadBalancerSku: basic
                   networkPlugin: azure
                   networkPolicy: azure
-                  serviceCidr: <%= config[:services_ipv4_cidr] || '10.0.0.0/16' %>
+                  serviceCidr: \"[variables(\'services_ipv4_cidr\')]"
           outputs:
             endpoint:
               type: string
-              value: "[reference(parameters('name')).fqdn]"
+              value: \"[reference(variables(\'name\')).fqdn]\"
         YAML
-        Template::Render.new(config).render(template)
+        Clusters::Utils::Template::Render.new(config).render(template)
       end
     end
   end
