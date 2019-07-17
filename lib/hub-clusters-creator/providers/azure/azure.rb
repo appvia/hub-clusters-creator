@@ -161,7 +161,7 @@ module Clusters
 
         # @step: update the dns record for the ingress
         unless (config[:grafana_hostname] || '').empty?
-          if !address.empty?
+          if !address.nil? && !address.empty?
             info "adding a dns record for #{config[:grafana_hostname]} => #{address}"
             dns(config[:grafana_hostname].split('.').first, address, config[:domain])
           else
