@@ -43,7 +43,7 @@ module Clusters
     Clusters::Agent.schema(provider)
   end
 
-  def self.providers?(name)
-    Clusters::Agent.providers?(name)
+  def self.provider?(name)
+    Clusters::Agent.provider?(name)
   end
 end
