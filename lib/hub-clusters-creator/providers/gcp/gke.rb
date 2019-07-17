@@ -175,7 +175,7 @@ module Clusters
       def provision_cluster(name, config)
         info "waiting for the master api endpoint to be available on cluster: #{name}"
         thing = cluster(name)
-        @client = Clusters::Kube.new(thing.endpoint, authorize.access_token)
+        @client = Clusters::Kube.new(thing.endpoint, token: authorize.access_token)
         @client.wait_for_kubeapi
 
         # @step: if psp is enabled we need to add the roles and bindings

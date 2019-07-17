@@ -53,9 +53,9 @@ module Clusters
     end
 
     # defaults builds the default from the schema
-    def defaults
+    def self.defaults(provider)
       values = {}
-      schema['properties'].reject { |x, _v| x == 'authorized_master_cidrs' }.each do |k, v|
+      schema(provider)['properties'].reject { |x, _v| x == 'authorized_master_cidrs' }.each do |k, v|
         values[k.to_sym] = v['default']
       end
       # @TODO find a better way of doing this
@@ -65,14 +65,38 @@ module Clusters
       values
     end
 
+    # providers provides the consumer with a list of supported cloud providers
+    def self.providers
+      list = []
+      load_schema['properties'].each_pair do |_x, x|
+        next unless x.key?('provider')
+
+        x['provider'].each do |i|
+          next if i == '*' || list.include?(i)
+
+          list.push(i)
+        end
+      end
+      list.sort
+    end
+
+    # provider? check if the provider exists
+    def self.provider?(name)
+      providers.include?(name)
+    end
+
     # schema returns the json schema defining all the options we support
-    def schema(provider = @provider_name)
-      @schema ||= YAML.safe_load(File.read("#{__dir__}/schema.yaml"))
-      generated = @schema.dup
-      generated['properties'] = @schema['properties'].select do |_name, x|
+    def self.schema(provider)
+      generated = load_schema.dup
+      generated['properties'] = load_schema['properties'].select do |_name, x|
         x['provider'].include?(provider) || x['provider'].include?('*')
       end
       generated
+    end
+
+    # load_schema is responsible for reading in the schema
+    def self.load_schema
+      YAML.safe_load(File.read("#{__dir__}/schema.yaml"))
     end
 
     # destroy is responsible is tearing down the cluster
@@ -84,7 +108,7 @@ module Clusters
     # rubocop:disable Lint/RescueException
     def provision(options)
       name = options[:name]
-      config = defaults.merge(options)
+      config = Clusters.defaults(@provider_name).merge(options)
 
       # @step: provision the cluster if not already there
       begin
@@ -109,7 +133,7 @@ module Clusters
     private
 
     def validate(config)
-      JsonSchema.parse!(schema).validate(config)
+      JsonSchema.parse!(Clusters::schema(@provider_name)).validate(config)
     rescue StandardError => e
       raise ConfigurationError, "configuration invalid, error: #{e}"
     end

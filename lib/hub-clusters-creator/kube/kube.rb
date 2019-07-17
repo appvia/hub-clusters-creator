@@ -21,15 +21,35 @@ module Clusters
   # Kube is a collection of methods for interacting with the kubernetes api
   # rubocop:disable Metrics/LineLength,Metrics/MethodLength,Metrics/ParameterLists
   class Kube
-    attr_accessor :endpoint, :token
+    attr_accessor :endpoint
 
-    def initialize(endpoint, token)
-      raise ArgumentError, 'you have not specified an access token' unless token
-      raise ArgumentError, 'you have not specified an endpoint' unless endpoint
+    def initialize(endpoint, token: nil, client_certificate: nil, client_key: nil, certificate_authority: nil)
+      options = {
+        ssl_verify_peer: false
+      }
+
+      config = K8s::Config.new(
+        clusters: [{
+          name: 'default',
+          cluster: { server: 'https://' + endpoint, certificate_authority_data: certificate_authority }
+        }],
+        users: [{
+          name: 'default',
+          user: {
+            token: token,
+            client_certificate_data: client_certificate,
+            client_key_data: client_key
+          }
+        }],
+        contexts: [{
+          name: 'default',
+          context: { cluster: 'default', user: 'default' }
+        }],
+        current_context: 'default'
+      )
 
       @endpoint = "https://#{endpoint}" unless endpoint.start_with?('https')
-      @token = token
-      @client = K8s.client(@endpoint, auth_token: @token, ssl_verify_peer: false)
+      @client = K8s::Client.config(config, options)
     end
 
     # exists? checks if the resource exists
@@ -114,7 +134,8 @@ module Clusters
       while attempts < max_attempts
         begin
           return if @client.api('v1').resource('nodes').list
-        rescue StandardError
+        rescue StandardError => e
+          puts "bad: #{e}"
           attempts += 1
         end
         sleep(interval)

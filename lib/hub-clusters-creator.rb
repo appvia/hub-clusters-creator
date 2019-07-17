@@ -30,4 +30,20 @@ module Clusters
   def self.new(provider)
     Clusters::Agent.new(provider)
   end
+
+  def self.defaults(provider)
+    Clusters::Agent.defaults(provider)
+  end
+
+  def self.providers
+    Clusters::Agent.providers
+  end
+
+  def self.schema(provider)
+    Clusters::Agent.schema(provider)
+  end
+
+  def self.providers?(name)
+    Clusters::Agent.providers?(name)
+  end
 end

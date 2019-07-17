@@ -152,7 +152,7 @@ properties:
 
   enable_horizontal_pod_autoscaler:
     $id: '#/properties/enable_horizontal_pod_autoscaler'
-    tags: ['addons']
+    tags: ['default']
     provider: ['gcp']
     type: boolean
     title: Horizontal Pod Autoscaler
@@ -168,7 +168,7 @@ properties:
 
   enable_http_loadbalancer:
     $id: '#/properties/enable_http_loadbalancer'
-    tags: ['addons']
+    tags: ['default']
     provider: ['gcp']
     type: boolean
     title: HTTP Ingress Controller
@@ -183,7 +183,7 @@ properties:
 
   enable_istio:
     $id: '#/properties/enable_istio'
-    tags: ['addons']
+    tags: ['default']
     provider: ['gcp']
     type: boolean
     title: Istion Service Mesh
@@ -198,7 +198,7 @@ properties:
 
   enable_logging:
     $id: '#/properties/enable_logging'
-    tags: ['addons']
+    tags: ['default']
     provider: ['gcp']
     type: boolean
     title: Stackdriver Logging
@@ -211,7 +211,7 @@ properties:
 
   enable_monitoring:
     $id: '#/properties/enable_monitoring'
-    tags: ['addons']
+    tags: ['default']
     provider: ['gcp']
     type: boolean
     title: Stackdriver Metrics
@@ -474,6 +474,19 @@ properties:
     examples:
       - 1
       - 10
+
+  ssh_key:
+    $id: '#/properties/ssh_key'
+    tags: ['default']
+    provider: ['aks']
+    type: string
+    title: SSH Public Key
+    default: ''
+    description: >
+      A public ssh key used provision the compute nodes with
+    examples:
+      - ssh-rsa
+    pattern: ^ssh-rsa.*$
 
   subnetwork:
     $id: '#/properties/subnetwork'
