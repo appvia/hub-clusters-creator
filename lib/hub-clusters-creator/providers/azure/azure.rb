@@ -20,7 +20,10 @@ require 'hub-clusters-creator/providers/bootstrap'
 require 'hub-clusters-creator/template'
 
 require 'azure_mgmt_resources'
+require 'azure_mgmt_container_service'
+require 'azure_mgmt_dns'
 require 'json'
+require 'uri'
 
 # rubocop:disable Metrics/ClassLength,Metrics/LineLength,Metrics/MethodLength
 module Clusters
@@ -29,6 +32,8 @@ module Clusters
     class AKS
       include ::Azure::Resources::Profiles::Latest::Mgmt
       include ::Azure::Resources::Profiles::Latest::Mgmt::Models
+      include ::Azure::ContainerService::Mgmt::V2019_04_01
+      include ::Azure::Dns::Mgmt::V2017_10_01
       include Azure::Helpers
       include Clusters::Utils::Template
       include Errors
@@ -43,12 +48,18 @@ module Clusters
         @provider = MsRestAzure::ApplicationTokenProvider.new(@tenant, @client_id, @client_secret)
         @credentials = MsRest::TokenCredentials.new(@provider)
 
+        @containers = ::Azure::ContainerService::Mgmt::V2019_04_01::ContainerServiceClient.new(@credentials)
+        @containers.subscription_id = @subscription
+
+        @dns = ::Azure::Dns::Mgmt::V2017_10_01::DnsManagementClient.new(@credentials)
+        @dns.subscription_id = @subscription
+
         options = {
-          tenant_id: @tenant,
           client_id: @client_id,
           client_secret: @client_secret,
+          credentials: @credentials,
           subscription_id: @subscription,
-          credentials: @credentials
+          tenant_id: @tenant
         }
 
         @client = Client.new(options)
@@ -75,8 +86,11 @@ module Clusters
       end
 
       # delete is responsible for deleting the cluster via resource group
-      def delete(group)
-        puts "deleting the group: #{group}"
+      def delete(name)
+        return unless resource_group?(name)
+
+        info "deleting the resource group: #{name}"
+        @client.resource_groups.delete(name, name)
       end
 
       private
@@ -85,92 +99,142 @@ module Clusters
       # rubocop:disable Metrics/AbcSize
       def provision_aks(name, config)
         # @step: define the resource group
-        resource_group_name = config[:resource_group] || name.to_s
+        resource_group_name = name
 
         # @step: check the resource group exists
-        unless resource_group?(config[:resource_group])
+        if resource_group?(resource_group_name)
+          info "skipping the resource group creation: #{resource_group_name}, already exists"
+        else
           info "creating the resource group: #{resource_group_name} in azure"
           params = ::Azure::Resources::Mgmt::V2019_05_10::Models::ResourceGroup.new.tap do |x|
             x.location = config[:region]
           end
           # ensure the resource group is created
           @client.resource_groups.create_or_update(resource_group_name, params)
+          # wait for a moment
+          sleep 10
         end
 
+        info "provisioning the azure deployment manifest: #{name}, resource group: #{resource_group_name}"
         # @step: generate the ARM deployments
-        puts cluster_template(config)
         template = YAML.safe_load(cluster_template(config))
-        puts template.to_json
 
         # @step: kick off the deployment and cross fingers
         deployment = ::Azure::Resources::Mgmt::V2019_05_10::Models::Deployment.new
         deployment.properties = ::Azure::Resources::Mgmt::V2019_05_10::Models::DeploymentProperties.new
-        deployment.properties.template = template.to_json
+        deployment.properties.template = template
         deployment.properties.mode = ::Azure::Resources::Mgmt::V2019_05_10::Models::DeploymentMode::Incremental
 
         # put the deployment to the resource group
-        @client.deployments.create_or_update(resource_group_name, name, deployment)
+        @client.deployments.create_or_update_async(resource_group_name, name, deployment)
+
+        # wait for the deployment to finish
+        wait_on_deployment(resource_group_name, name)
       end
       # rubocop:enable Metrics/AbcSize
 
       # provision_cluster is responsible for kicking off the initialization
-      def provision_cluster(name, config); end
+      # rubocop:disable Metrics/AbcSize
+      def provision_cluster(name, config)
+        resource_group_name = name
+
+        # @step retrieve the kubeconfig - I HATE everything about Azure!!
+        packed = @containers.managed_clusters.list_cluster_admin_credentials(resource_group_name, name)
+        kc = YAML.safe_load(packed.kubeconfigs.first.value.pack('c*'))
+
+        ca = kc['clusters'].first['cluster']['certificate-authority-data']
+        endpoint = URI(kc['clusters'].first['cluster']['server']).hostname
+
+        # @step: provision a kubernetes client for this cluster
+        kube = Clusters::Kube.new(endpoint,
+                                  client_certificate: kc['users'].first['user']['client-certificate-data'],
+                                  client_key: kc['users'].first['user']['client-key-data'])
+
+        info "waiting for the kubeapi to become available at: #{endpoint}"
+        kube.wait_for_kubeapi
+
+        # @step: provision the bootstrap
+        info "attempting to bootstrap the cluster: #{name}"
+        Clusters::Providers::Bootstrap.new(name, kube, config).bootstrap
+        ingress = @client.get('loki-grafana', 'loki', 'ingresses', version: 'extensions/v1beta1')
+        address = ingress.status.loadBalancer.ingress.first.ip
+
+        # @step: update the dns record for the ingress
+        unless (config[:grafana_hostname] || '').empty?
+          if !address.empty?
+            info "adding a dns record for #{config[:grafana_hostname]} => #{address}"
+            dns(config[:grafana_hostname].split('.').first, address, config[:domain])
+          else
+            info 'cloud ingress controller has failed to provision load balancer'
+          end
+        end
+
+        {
+          cluster: {
+            ca: ca,
+            endpoint: "https://#{endpoint}",
+            token: kube.account('sysadmin')
+          },
+          config: config,
+          services: {
+            grafana: {
+              address: address,
+              hostname: config[:grafana_hostname]
+            }
+          }
+        }
+      end
+      # rubocop:enable Metrics/AbcSize
 
       # validate is responsible for validating the options
       def validate(options)
         %i[name region machine_type ssh_key].each do |x|
           raise ArgumentError, "you must specify the #{x} options" unless options.key?(x)
         end
+        raise ArgumentError, "the domain: #{options[:domain]} does not exist" unless domain?(options[:domain])
       end
 
       # cluster_template is responsible for rendering the template for ARM
       def cluster_template(config)
         template = <<~YAML
-          $schema: https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#
+          '$schema': https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#
           contentVersion: 1.0.0.0
           parameters: {}
-          variables:
-            name: '<%= context[:name] %>'
-            disk_size: <%= context[:disk_size_gb] %>
-            domain: '<%= context[:name] %>'
-            location: '<%= context[:region] %>'
-            machine_type: '<%= context[:machine_type] %>'
-            node_size: <%= context[:size] %>
-            services_ipv4_cidr: '<%= context[:services_ipv4_cidr].empty? ? '10.0.0.0/16' : context[:services_ipv4_cidr] %>'
-            service_principal_clientid: 'me'
-            service_principal_secret: 'me'
-            ssh_key: '<%= context[:ssh_key] %>'
-            version: '<%= context[:version] %>'
+          variables: {}
           resources:
             - type: Microsoft.ContainerService/managedClusters
-              name: \"[variables(\'name\')]\"
+              name: <%= context[:name] %>
               apiVersion: '2019-06-01'
-              location: \"[variables(\'location\')]\"
+              location: <%= context[:region] %>
               tags:
-                cluster: \"[variables(\'name\')]\"
+                cluster: <%= context[:name] %>
               properties:
-                kubernetesVersion: \"[variables(\'version\')]\"
-                dnsPrefix: \"[variables(\'name\')]\"
+                kubernetesVersion: <%= context[:version] %>
+                dnsPrefix: <%= context[:name] %>
+                addonProfiles:
+                  httpapplicationrouting:
+                    enabled: true
+                    config:
+                      HTTPApplicationRoutingZoneName: <%= context[:domain] %>
                 agentPoolProfiles:
                   - name: compute
-                    count: \"[variables(\'node_size\')]\"
+                    count: <%= context[:size] %>
                     maxPods: 110
-                    osDiskSizeGB: \"[variables(\'disk_size\')]\"
+                    osDiskSizeGB: <%= context[:disk_size_gb] %>
                     osType: Linux
                     storageProfile: ManagedDisks
                     type: VirtualMachineScaleSets
-                    vmSize: \"[variables(\'machine_type\')]\"
+                    vmSize: <%= context[:machine_type] %>
                 servicePrincipalProfile:
-                  clientId: \"[variables(\'service_principal_clientid\')]\"
-                  secret: \"[variables(\'service_principal_secret\')]\"
+                  clientId: #{@client_id}
+                  secret: #{@client_secret}
                 linuxProfile:
                   adminUsername: azureuser
                   <%- unless (context[:ssh_key] || '').empty? -%>
                   ssh:
                     publicKeys:
-                      - keyData: \"[variables(\'ssh_key\')]\"
+                      - keyData: <%= context[:ssh_key] %>
                   <%- end -%>
-                addonProfiles: {}
                 enableRBAC: true
                 enablePodSecurityPolicy: true
                 networkProfile:
@@ -179,11 +243,7 @@ module Clusters
                   loadBalancerSku: basic
                   networkPlugin: azure
                   networkPolicy: azure
-                  serviceCidr: \"[variables(\'services_ipv4_cidr\')]"
-          outputs:
-            endpoint:
-              type: string
-              value: \"[reference(variables(\'name\')).fqdn]\"
+                  serviceCidr: <%= context[:services_ipv4_cidr].empty? ? '10.0.0.0/16' : context[:services_ipv4_cidr] %>
         YAML
         Clusters::Utils::Template::Render.new(config).render(template)
       end

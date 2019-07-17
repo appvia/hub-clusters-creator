@@ -90,7 +90,7 @@ module Clusters
         end
         info 'bootstrap has successfully completed'
 
-        info 'attempting to add or update dns record for grafana'
+        info 'waiting for grafana ingress load balancer to be provisioned'
         # @step: wait for the ingress to appaar and provision and grab the address
         @client.wait('loki-grafana', 'loki', 'ingresses', version: 'extensions/v1beta1') do |x|
           x.status.loadBalancer.ingress.empty? ? false : true
@@ -144,7 +144,7 @@ module Clusters
                   hosts:
                     - <%= context[:grafana_hostname] %>
                 persistence:
-                  enabled: true
+                  enabled: false
                   accessModes:
                     - ReadWriteOnce
                   size: <%= context[:grafana_disk_size] %><%= context[:grafana_disk_size].to_s.end_with?('Gi') ? '' : 'Gi' %>
