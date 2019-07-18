@@ -14,29 +14,32 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 
 require 'erb'
 
-module GKE
-  # Tamplate is a collection of erb template
-  module Template
-    # Render is a class for templating
-    class Render
-      attr_accessor :context
+module Clusters
+  module Utils
+    # Template is a collection of erb template
+    module Template
+      # Render is a class for templating
+      class Render
+        attr_accessor :context
 
-      def initialize(context)
-        @context = context
-      end
+        def initialize(context)
+          @context = context
+        end
 
-      def render(template)
-        ERB.new(template, nil, '-').result(get_binding)
-      end
+        def render(template)
+          ERB.new(template, nil, '-').result(get_binding)
+        end
 
-      # rubocop:disable Naming/AccessorMethodName
-      def get_binding
-        binding
+        # rubocop:disable Naming/AccessorMethodName
+        def get_binding
+          binding
+        end
+        # rubocop:enable Naming/AccessorMethodName
       end
-      # rubocop:enable Naming/AccessorMethodName
     end
   end
 end

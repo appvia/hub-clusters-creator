@@ -1,5 +1,8 @@
+# rubocop:disable Naming/FileName
 # frozen_string_literal: true
 
+#
+# rubocop:enable Naming/FileName
 # Copyright (C) 2019  Rohith Jayawardene <gambol99@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
@@ -15,21 +18,32 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-$LOAD_PATH.unshift File.join(File.dirname(__FILE__), 'hub-clusters-creator/')
-require 'agent'
+require_relative 'hub-clusters-creator/agent'
+require_relative 'hub-clusters-creator/version'
 
-module GKE
-  # Provision is a wrapper to the agent
-  module Provision
-    ROOT = __dir__
-    require "#{ROOT}/hub-clusters-creator/version"
+# Clusters providers the wrapper to the providers
+module Clusters
+  def self.version
+    Clusters::VERSION
+  end
 
-    def self.version
-      GKE::VERSION
-    end
+  def self.new(provider)
+    Clusters::Agent.new(provider)
+  end
 
-    def self.new(account, project, region, logging = false)
-      GKE::Agent.new(account, project, region, logging)
-    end
+  def self.defaults(provider)
+    Clusters::Agent.defaults(provider)
+  end
+
+  def self.providers
+    %w[aks gke]
+  end
+
+  def self.schema(provider)
+    Clusters::Agent.schema(provider)
+  end
+
+  def self.provider?(name)
+    Clusters::Agent.providers.include(name)
   end
 end

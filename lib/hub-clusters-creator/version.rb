@@ -15,6 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-module GKE
-  VERSION = '0.0.1'
+module Clusters
+  VERSION = '0.0.2'
 end

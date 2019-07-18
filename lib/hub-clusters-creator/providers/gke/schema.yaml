@@ -3,14 +3,28 @@ type: object
 title: GKE Cluster Configuration
 required:
   - description
-  - domain
-  - name
+  - disk_size_gb
+  - enable_autoscaler
+  - enable_autoupgrade
+  - enable_binary_authorization
+  - enable_horizontal_pod_autoscaler
+  - enable_http_loadbalancer
+  - enable_istio
+  - enable_logging
+  - enable_monitoring
+  - enable_private_endpoint
+  - enable_private_network
+  - image_type
+  - machine_type
+  - maintenance_window
+  - network
+  - subnetwork
+  - version
 
 properties:
   authorized_master_cidrs:
     $id: '#/properties/authorized_master_cidrs'
-    tags: ['default']
-    provider: ['*']
+    tag: default
     type: array
     title: Master Authorized Networks
     items:
@@ -40,8 +54,7 @@ properties:
 
   cluster_ipv4_cidr:
     $id: '#/properties/cluster_ipv4_cidr'
-    tags: ['advanced']
-    provider: ['gcp']
+    tag: advanced
     type: string
     title: Cluster Pod Network
     default: ''
@@ -54,8 +67,7 @@ properties:
 
   create_subnetwork:
     $id: '#/properties/create_subnetwork'
-    tags: ['advanced']
-    provider: ['gcp']
+    tag: advanced
     type: boolean
     title: Create Subnetwork
     description: >
@@ -66,23 +78,21 @@ properties:
       - false
       - true
 
-  domain:
-    $id: '#/properties/domain'
-    tags: ['default']
-    provider: ['*']
+  description:
+    $id: '#/properties/description'
+    tag: default
     type: string
-    title: Cloud DNS Domains
-    default: ''
+    title: Description
     description: >
-      The dns domain which the cluster is using; this mist be accessible from
-      with inside the project.
+      A summary description for this cluster.
+    default: ''
     examples:
-      - 'example.com'
+      - Dev Cluster
+    pattern: ^(.*)$
 
   disk_size_gb:
     $id: '#/properties/disk_size_gb'
-    tags: ['default']
-    provider: ['*']
+    tag: default
     type: integer
     title: Compute Disk Size (GB)
     default: 100
@@ -95,8 +105,7 @@ properties:
 
   enable_autorepair:
     $id: '#/properties/enable_autorepair'
-    tags: ['default']
-    provider: ['gcp']
+    tag: default
     type: boolean
     title: Node Autorepair
     default: true
@@ -109,8 +118,7 @@ properties:
 
   enable_autoscaler:
     $id: '#/properties/enable_autoscaler'
-    tags: ['default']
-    provider: ['*']
+    tag: default
     type: boolean
     title: Cluster Autoscaling
     default: true
@@ -123,8 +131,7 @@ properties:
 
   enable_autoupgrade:
     $id: '#/properties/enable_autoupgrade'
-    tags: ['default']
-    provider: ['gcp']
+    tag: default
     type: boolean
     title: Cluster Autoupgrading
     default: true
@@ -138,8 +145,7 @@ properties:
 
   enable_binary_authorization:
     $id: '#/properties/enable_binary_authorization'
-    tags: ['advanced']
-    provider: ['gcp']
+    tag: advanced
     type: boolean
     title: Binary Authorization Service
     default: false
@@ -152,8 +158,7 @@ properties:
 
   enable_horizontal_pod_autoscaler:
     $id: '#/properties/enable_horizontal_pod_autoscaler'
-    tags: ['default']
-    provider: ['gcp']
+    tag: default
     type: boolean
     title: Horizontal Pod Autoscaler
     default: false
@@ -168,8 +173,7 @@ properties:
 
   enable_http_loadbalancer:
     $id: '#/properties/enable_http_loadbalancer'
-    tags: ['default']
-    provider: ['gcp']
+    tag: default
     type: boolean
     title: HTTP Ingress Controller
     default: true
@@ -183,10 +187,9 @@ properties:
 
   enable_istio:
     $id: '#/properties/enable_istio'
-    tags: ['default']
-    provider: ['gcp']
+    tag: default
     type: boolean
-    title: Istion Service Mesh
+    title: Istio Service Mesh
     default: false
     description: >
       Indicates if the GKE Istio service mesh is deployed to the
@@ -198,11 +201,10 @@ properties:
 
   enable_logging:
     $id: '#/properties/enable_logging'
-    tags: ['default']
-    provider: ['gcp']
+    tag: default
     type: boolean
     title: Stackdriver Logging
-    default: true
+    default: false
     description: >
       Indicates if Stackdriver metrics should be enabled for the cluster
     examples:
@@ -211,47 +213,19 @@ properties:
 
   enable_monitoring:
     $id: '#/properties/enable_monitoring'
-    tags: ['default']
-    provider: ['gcp']
+    tag: default
     type: boolean
     title: Stackdriver Metrics
-    default: true
+    default: false
     description: >
       Indicates if Stackdriver logging should be enabled for the cluster
     examples:
       - false
       - true
 
-  enable_network_policies:
-    $id: '#/properties/enable_network_policies'
-    tags: ['advanced']
-    provider: ['*']
-    type: boolean
-    title: Network Policies Enforcement
-    default: true
-    description: >
-      Indicates if network policies via Calico is enabled in the cluster
-    examples:
-      - true
-      - false
-
-  enable_pod_security_policies:
-    $id: '#/properties/enable_pod_security_polices'
-    tags: ['advanced']
-    provider: ['*']
-    type: boolean
-    title: Pod Security Policies
-    default: true
-    description: >
-      Indicates is pod security policies should be enabled in the cluster.
-    examples:
-      - true
-      - false
-
   enable_private_endpoint:
     $id: '#/properties/enable_private_endpoint'
-    tags: ['advanced']
-    provider: ['gcp']
+    tag: advanced
     type: boolean
     title: Private Endpoints
     default: false
@@ -264,8 +238,7 @@ properties:
 
   enable_private_network:
     $id: '#/properties/enable_private_network'
-    tags: ['advanced']
-    provider: ['gcp']
+    tag: advanced
     type: boolean
     title: Private Node Networking
     default: true
@@ -278,8 +251,7 @@ properties:
 
   image_type:
     $id: '#/properties/image_type'
-    tags: ['advanced']
-    provider: ['gcp']
+    tag: advanced
     type: string
     title: Machine Image
     default: 'COS'
@@ -289,77 +261,12 @@ properties:
       - COS
     pattern: ^(.*)$
 
-  github_client_id:
-    $id: '#/properties/github_client_id'
-    tags: ['default']
-    provider: ['*']
-    type: string
-    title: Github Client ID
-    default: ''
-    description: >
-      The Github client id for the oauth2 application
-    examples:
-      - ''
-    pattern: ^(.*)$
-
-  github_client_secret:
-    $id: '#/properties/github_client_secret'
-    tags: ['default']
-    provider: ['*']
-    type: string
-    title: Github Client Secret
-    default: ''
-    description: >
-      The Github client secret taken from the oauth2 application
-    examples:
-      - ''
-    pattern: ^(.*)$
-
-  grafana_disk_size:
-    $id: '#/properties/grafana_disk_size'
-    type: integer
-    provider: ['*']
-    title: Grafana Disk Size
-    default: 10
-    description: >
-      The size of the disk used for grafana instance
-    examples:
-      - 10
-      - 100
-
-  grafana_hostname:
-    $id: '#/properties/grafana_hostname'
-    tags: ['default']
-    provider: ['*']
-    type: string
-    title: Grafana Hostname
-    default: 'grafana'
-    description: >
-      The dns hostname which grafana should be configured to respond to.
-    examples:
-      - grafana
-      - metrics
-    pattern: ^(.*)$
-
-  grafana_version:
-    $id: '#/properties/grafana_version'
-    tags: ['advanced']
-    provider: ['*']
-    type: string
-    title: Grafana Version
-    default: '6.2.5'
-    description: >
-      The version of the grafana which should be installed.
-    examples:
-      - 6.2.5
-    pattern: ^(.*)$
-
   machine_type:
     $id: '#/properties/machine_type'
-    tags: ['default']
-    provider: ['*']
+    tag: default
     type: string
     title: Machine Type
+    default: n1-standard-1
     description: >
       The GCP machine type which the default nodes pool should use.
     examples:
@@ -368,8 +275,7 @@ properties:
 
   maintenance_window:
     $id: '#/properties/maintenance_window'
-    tags: ['default']
-    provider: ['gcp']
+    tag: default
     type: string
     title: Maintenance Window
     default: '03:00'
@@ -382,8 +288,7 @@ properties:
 
   master_ipv4_cidr_block:
     $id: '#/properties/master_ipv4_cidr_block'
-    tags: ['default']
-    provider: ['gcp']
+    tag: default
     type: string
     title: Master Peer Network Block
     default: '172.16.0.0/28'
@@ -395,23 +300,9 @@ properties:
       - '172.16.0.0/28'
     pattern: ^([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}$
 
-  max_nodes:
-    $id: '#/properties/max_nodes'
-    tags: ['default']
-    provider: ['*']
-    type: integer
-    title: Max Nodes
-    default: 10
-    description: >
-      Assuming the autoscaler is enabled this is the maximum number
-      nodes permitted.
-    examples:
-      - 10
-
   network:
     $id: '#/properties/network'
-    tags: ['default']
-    provider: ['gcp']
+    tag: default
     type: string
     title: GCP Network
     default: 'default'
@@ -424,8 +315,7 @@ properties:
 
   preemptible:
     $id: '#/properties/preemptible'
-    tags: ['advanced']
-    provider: ['gcp']
+    tag: advanced
     type: boolean
     title: Preemptible Nodes
     default: false
@@ -435,23 +325,9 @@ properties:
       - false
       - true
 
-  region:
-    $id: '#/properties/region'
-    tags: ['default']
-    provider: ['*']
-    type: string
-    title: GCP Region
-    default: 'europe-west2'
-    description: >
-      The GCP region which the cluster will reside within (europe-west2 etc)
-    examples:
-      - europe-west2
-    pattern: ^(.*)$
-
   services_ipv4_cidr:
     $id: '#/properties/services_ipv4_cidr'
-    tags: ['advanced']
-    provider: ['*']
+    tag: advanced
     type: string
     title: Cluster Services CIDR
     default: ''
@@ -462,36 +338,9 @@ properties:
       - ''
     pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
 
-  size:
-    $id: '#/properties/size'
-    tags: ['default']
-    provider: ['*']
-    type: integer
-    title: Initial Node Size
-    default: 1
-    description: >
-      The number of nodes per zone which should exist in the cluster.
-    examples:
-      - 1
-      - 10
-
-  ssh_key:
-    $id: '#/properties/ssh_key'
-    tags: ['default']
-    provider: ['aks']
-    type: string
-    title: SSH Public Key
-    default: ''
-    description: >
-      A public ssh key used provision the compute nodes with
-    examples:
-      - ssh-rsa
-    pattern: ^ssh-rsa.*$
-
   subnetwork:
     $id: '#/properties/subnetwork'
-    tags: ['default']
-    provider: ['gcp']
+    tag: default
     type: string
     title: Subnetwork for Nodes
     default: 'default'
@@ -503,8 +352,7 @@ properties:
 
   version:
     $id: '#/properties/version'
-    tags: ['default']
-    provider: ['*']
+    tag: default
     type: string
     title: Initial Kubernetes Version
     default: 'latest'

@@ -14,10 +14,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 
-require 'colorize'
-
-module GKE
+module Clusters
   # Logging is few helper functions for logging
   module Logging
     def info(string, options = {})
@@ -25,11 +24,11 @@ module GKE
     end
 
     def warn(string)
-      Kernel.warn formatted_string(string, symbol: '*', color: :orange)
+      Kernel.warn formatted_string(string, symbol: '*')
     end
 
     def error(string)
-      Kernel.warn formatted_string(string, symbol: '!', color: :red)
+      Kernel.warn formatted_string(string, symbol: '!')
     end
 
     private
@@ -39,11 +38,8 @@ module GKE
     end
 
     def formatted_string(string, options = {})
-      return unless @logging
-
       symbol = options[:symbol] || ''
       string = string.to_s
-      string = string.colorize(options[:color]) if options[:color]
       "#{symbol}#{string}\n"
     end
   end
