@@ -15,7 +15,7 @@ build:
 	gem build hub-clusters-creator.gemspec
 
 docker:
-	@echo "--> Builing the docker image: ${REGISTRY}/${AUTHOR}/${NAME}:${VERSION}"
+	@echo "--> Building the docker image: ${REGISTRY}/${AUTHOR}/${NAME}:${VERSION}"
 	@(cd docker && docker build -t ${REGISTRY}/${AUTHOR}/${NAME}:${VERSION} .)
 
 push:
