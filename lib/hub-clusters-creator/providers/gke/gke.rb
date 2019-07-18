@@ -24,7 +24,7 @@ require 'hub-clusters-creator/errors'
 require 'hub-clusters-creator/kube/kube'
 require 'hub-clusters-creator/logging'
 require 'hub-clusters-creator/providers/bootstrap'
-require 'hub-clusters-creator/providers/gcp/helpers'
+require 'hub-clusters-creator/providers/gke/helpers'
 
 # rubocop:disable Metrics/ClassLength,Metrics/LineLength,Metrics/MethodLength
 module Clusters
@@ -179,11 +179,9 @@ module Clusters
         @client.wait_for_kubeapi
 
         # @step: if psp is enabled we need to add the roles and bindings
-        if config[:enable_pod_security_policies]
-          info 'creating the default psp binding to unpriviledged policy'
-          @client.kubectl(DEFAULT_PSP_CLUSTER_ROLE)
-          @client.kubectl(DEFAULT_PSP_CLUSTERROLE_BINDING)
-        end
+        info 'creating the default psp binding to unpriviledged policy'
+        @client.kubectl(DEFAULT_PSP_CLUSTER_ROLE)
+        @client.kubectl(DEFAULT_PSP_CLUSTERROLE_BINDING)
 
         # @step: bootstrap the cluster and wait
         Clusters::Providers::Bootstrap.new(name, @client, config).bootstrap
@@ -206,7 +204,6 @@ module Clusters
       def validate(config)
         raise ConfigurationError, "domain: #{config[:domain]} does not exist within project" unless domain?(config[:domain])
         raise ConfigurationError, 'disk size must be positive' unless config[:disk_size_gb].positive?
-        raise ConfigurationError, 'invalid maintenance window should be HH:MM' unless config[:maintenance_window] =~ /^[0-9]{2}:[0-9]{2}$/
         raise ConfigurationError, 'size must be positive' unless config[:size].positive?
 
         # @check the networking options

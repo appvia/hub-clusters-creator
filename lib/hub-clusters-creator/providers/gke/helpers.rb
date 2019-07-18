@@ -192,7 +192,7 @@ module Clusters
                 autoscaling: Google::Apis::ContainerV1beta1::NodePoolAutoscaling.new(
                   autoprovisioned: false,
                   enabled: options[:enable_autoscaler],
-                  max_node_count: options[:max_nodes],
+                  max_node_count: options[:max_size],
                   min_node_count: options[:size]
                 ),
                 config: Google::Apis::ContainerV1beta1::NodeConfig.new(

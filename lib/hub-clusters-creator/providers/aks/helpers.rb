@@ -25,28 +25,26 @@ module Clusters
       module Helpers
         private
 
-        # wait_on_deployment waits for a deployment to finish - technically the create_or_update
-        # is blocking and works, but the internet here is shite and keeps dropping out
-        # rubocop:disable Lint/RescueException
-        def wait_on_deployment(group, name, interval: 10, timeout: 900)
+        def wait(interval: 20, timeout: 900, max_retries: 10)
           max_attempts = timeout / interval
           retries = attempts = 0
 
           while attempts < max_attempts
             begin
-              return if deployment(group, name).properties.provisioning_state == 'Succeeded'
-            rescue Exception => e
-              raise Exception, "failed waiting on deployment: #{id}, error: #{e}" if retries > 10
+              return if yield
+            rescue StandardError => e
+              raise Exception, "failed waiting for resource, retry: #{retries}, error: #{e}" if retries > max_retries
 
               retries += 1
             end
             sleep(interval)
             attempts += 1
           end
-
-          raise Exception, "deployment: '#{name}' in resource group: '#{group}' has timed out"
         end
-        # rubocop:enable Lint/RescueException
+
+        def hostname(fqdn)
+          fqdn.split('.').first
+        end
 
         def dns(src, dest, zone, ttl: 120)
           raise ArgumentError, "the domain: #{zone} does not exist" unless domain?(zone)

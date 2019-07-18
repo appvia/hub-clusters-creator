@@ -140,9 +140,9 @@ module Clusters
                   targetPort: 3000
                 ingress:
                   enabled: true
-                  path: /
                   hosts:
                     - <%= context[:grafana_hostname] %>
+                  path: '/*'
                 persistence:
                   enabled: false
                   accessModes:

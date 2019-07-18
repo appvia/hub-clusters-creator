@@ -36,7 +36,7 @@ module Clusters
   end
 
   def self.providers
-    Clusters::Agent.providers
+    %w[aks gke]
   end
 
   def self.schema(provider)
@@ -44,6 +44,6 @@ module Clusters
   end
 
   def self.provider?(name)
-    Clusters::Agent.provider?(name)
+    Clusters::Agent.providers.include(name)
   end
 end

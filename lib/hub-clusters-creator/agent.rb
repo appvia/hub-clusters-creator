@@ -15,13 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+require 'deep_merge'
 require 'json'
 require 'json_schema'
 
 require 'hub-clusters-creator/errors'
 require 'hub-clusters-creator/logging'
-require 'hub-clusters-creator/providers/azure/azure.rb'
-require 'hub-clusters-creator/providers/gcp/gke.rb'
+require 'hub-clusters-creator/providers/aks/azure.rb'
+require 'hub-clusters-creator/providers/gke/gke.rb'
 
 # rubocop:disable Metrics/MethodLength,Metrics/LineLength
 module Clusters
@@ -33,7 +34,7 @@ module Clusters
     def initialize(provider)
       @provider_name = provider[:provider]
       case @provider_name
-      when 'gcp'
+      when 'gke'
         @provider = Clusters::Providers::GKE.new(
           account: provider[:account],
           project: provider[:project],
@@ -65,38 +66,17 @@ module Clusters
       values
     end
 
-    # providers provides the consumer with a list of supported cloud providers
-    def self.providers
-      list = []
-      load_schema['properties'].each_pair do |_x, x|
-        next unless x.key?('provider')
-
-        x['provider'].each do |i|
-          next if i == '*' || list.include?(i)
-
-          list.push(i)
-        end
-      end
-      list.sort
-    end
-
-    # provider? check if the provider exists
-    def self.provider?(name)
-      providers.include?(name)
-    end
-
     # schema returns the json schema defining all the options we support
-    def self.schema(provider)
-      generated = load_schema.dup
-      generated['properties'] = load_schema['properties'].select do |_name, x|
-        x['provider'].include?(provider) || x['provider'].include?('*')
-      end
-      generated
-    end
+    def self.schema(name)
+      base = "#{__dir__}/providers"
+      path = base + "/#{name}/schema.yaml"
+      main = YAML.safe_load(File.read(base + '/schema.yaml'))
 
-    # load_schema is responsible for reading in the schema
-    def self.load_schema
-      YAML.safe_load(File.read("#{__dir__}/schema.yaml"))
+      raise ArgumentError, 'the provider schema does not supported' unless File.exist?(path)
+
+      main.deep_merge!(YAML.safe_load(File.read(path)))
+
+      main
     end
 
     # destroy is responsible is tearing down the cluster
@@ -133,7 +113,7 @@ module Clusters
     private
 
     def validate(config)
-      JsonSchema.parse!(Clusters::schema(@provider_name)).validate(config)
+      JsonSchema.parse!(Clusters.schema(@provider_name)).validate(config)
     rescue StandardError => e
       raise ConfigurationError, "configuration invalid, error: #{e}"
     end

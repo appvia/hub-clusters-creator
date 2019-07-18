@@ -1,0 +1,58 @@
+---
+type: object
+title: Azure AKS Cluster Configuration
+required:
+  - machine_type
+  - services_ipv4_cidr
+  - ssh_key
+  - version
+
+properties:
+  machine_type:
+    $id: '#/properties/machine_type'
+    tags: ['default']
+    type: string
+    title: Machine Type
+    description: >
+      The machine type which the default nodes pool should use.
+    examples:
+      - Standard_DS2_v2
+    pattern: ^(.*)$
+
+  services_ipv4_cidr:
+    $id: '#/properties/services_ipv4_cidr'
+    tags: ['advanced']
+    type: string
+    title: Cluster Services CIDR
+    default: ''
+    description: >
+      An optional network cidr configured for the cluster services,
+      otherwise GCP will decide.
+    examples:
+      - '10.0.0.0/16'
+    pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
+
+  ssh_key:
+    $id: '#/properties/ssh_key'
+    tags: ['default']
+    type: string
+    title: SSH Public Key
+    default: ''
+    description: >
+      A public ssh key used provision the compute nodes with
+    examples:
+      - ssh-rsa
+    pattern: ^ssh-rsa.*$
+
+  version:
+    $id: '#/properties/version'
+    tags: ['default']
+    type: string
+    title: Initial Kubernetes Version
+    default: '1.14.3'
+    description: >
+      The initial kubernetes version which the cluster should be
+      configured with.
+    examples:
+      - 1.14.3
+    pattern: ^(.*)$

@@ -34,8 +34,6 @@ puts creator.provision(
   github_client_secret: ENV['GITHUB_CLIENT_SECRET'],
   github_organization: ENV['GITHUB_ORG'],
   grafana_hostname: 'grafana.akslearning.appvia.io',
-  grafana_ingress: true,
-  machine_type: 'Standard_DS2_v2',
   size: 3,
   region: 'uksouth',
   ssh_key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAB/RZqb2UuuXmJbwml/G1InXVwgNe1tgz+Xd6HTfPlS00GSHTynjyLNKWbDBZhzj2jsM/40TyCZLLKai8hV4Lc72ijMsEAbSJ8gou0Kq6P25GxY7uQcCeACPT6AbQCZjiyzPCFPy+QC56W64QOtS+SLRefY8g4uGAz01ZfhChK0J2Mev1oiPXRAlOmzGz9fPpx4J8YE0R/OkEoWQaWdKVOV6nq2nz3vbwvLfbdK0EK/KAivwv9mlgalwSr3bgAXwRS2nXq7vyITvpjgDYcRu85fWSE9yeMyw4S10ya5/ALi+p4HkSbDaz2YGwksSup1lBeRflSKKghWba4+dzf4iO87cwYCN8erVxATznuPoB0TWYYOXrUwc3yGadOV5GkzQLLDhIzJ8BmMb/iT5jHBdHs1bK1lTThwPllmgkRANFIWMC9jyA3BgJp2vtHcLyOXOsFFaXqpjXZ2tvjaBVjaaDUY+CE2rbJMBquUMbvtxwBtkhVVQ4COofUsXhKOcwjOyo1Hw1hcJ9ig6DiuzYhiPr/JZPUk2l8ovAKkGwFjEui7jltcWzGrmRzFp8+Xdq9wl/BEeglPv+eZuuwXgAWRge992kepda1f5OlBUl8JrohbxtVcv+zvmVaiZqcrKpyNbtN0ELMA8e4K6wCllQ0oBr17oTG7JwMVgfvTCgsI+U/ jest@starfury',

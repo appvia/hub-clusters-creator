@@ -19,6 +19,7 @@
 $LOAD_PATH.unshift File.join(File.dirname(__FILE__), '.', '../lib')
 
 require 'hub-clusters-creator'
+require 'pp'
 
 account = File.read('account.json')
 region = 'europe-west2'
@@ -26,7 +27,7 @@ project = 'gke-learning-242311'
 
 creator = Clusters.new(
   account: account,
-  provider: 'gcp',
+  provider: 'gke',
   project: project,
   region: region
 )

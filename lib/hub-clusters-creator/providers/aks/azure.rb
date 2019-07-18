@@ -15,14 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-require 'hub-clusters-creator/providers/azure/helpers'
+require 'hub-clusters-creator/providers/aks/helpers'
 require 'hub-clusters-creator/providers/bootstrap'
 require 'hub-clusters-creator/template'
 
 require 'azure_mgmt_resources'
 require 'azure_mgmt_container_service'
 require 'azure_mgmt_dns'
-require 'json'
 require 'uri'
 
 # rubocop:disable Metrics/ClassLength,Metrics/LineLength,Metrics/MethodLength
@@ -39,11 +38,17 @@ module Clusters
       include Errors
       include Logging
 
+      # rubocop:disable Metrics/AbcSize
       def initialize(provider)
+        %i[client_id client_secret region subscription tenant].each do |x|
+          raise ArgumentError, "you must specify the '#{x}' provider option" unless provider.key?(x)
+        end
+
         @subscription = provider[:subscription]
         @tenant = provider[:tenant]
         @client_id = provider[:client_id]
         @client_secret = provider[:client_secret]
+        @region = provider[:region]
 
         @provider = MsRestAzure::ApplicationTokenProvider.new(@tenant, @client_id, @client_secret)
         @credentials = MsRest::TokenCredentials.new(@provider)
@@ -64,6 +69,7 @@ module Clusters
 
         @client = Client.new(options)
       end
+      # rubocop:enable Metrics/AbcSize
 
       # create is responsible for creating the cluster
       def create(name, config)
@@ -107,17 +113,32 @@ module Clusters
         else
           info "creating the resource group: #{resource_group_name} in azure"
           params = ::Azure::Resources::Mgmt::V2019_05_10::Models::ResourceGroup.new.tap do |x|
-            x.location = config[:region]
+            x.location = @region
           end
           # ensure the resource group is created
           @client.resource_groups.create_or_update(resource_group_name, params)
-          # wait for a moment
-          sleep 10
+
+          # wait for the resource group to be created
+          wait(max_retries: 20, interval: 10) do
+            resource_group?(resource_group_name)
+          end
         end
 
-        info "provisioning the azure deployment manifest: #{name}, resource group: #{resource_group_name}"
+        info "provisioning the azure deployment manifest: '#{name}', resource group: '#{resource_group_name}'"
         # @step: generate the ARM deployments
         template = YAML.safe_load(cluster_template(config))
+
+        # @step: check if a deployment is already underway and wait for completion - which
+        # makes it eaisier to rerun quickly
+        if deployment?(resource_group_name, name)
+          info "deployment: #{name}, resource group: #{resource_group_name} already underway, waiting for completion"
+          wait(interval: 30, max_retries: 20) do
+            if deployment?(resource_group_name, name)
+              d = deployment(resource_group_name, name)
+              d.properties.provisioning_state == 'Succeeded'
+            end
+          end
+        end
 
         # @step: kick off the deployment and cross fingers
         deployment = ::Azure::Resources::Mgmt::V2019_05_10::Models::Deployment.new
@@ -127,9 +148,13 @@ module Clusters
 
         # put the deployment to the resource group
         @client.deployments.create_or_update_async(resource_group_name, name, deployment)
-
         # wait for the deployment to finish
-        wait_on_deployment(resource_group_name, name)
+        wait(interval: 30, max_retries: 20) do
+          if deployment?(resource_group_name, name)
+            d = deployment(resource_group_name, name)
+            d.properties.provisioning_state == 'Succeeded'
+          end
+        end
       end
       # rubocop:enable Metrics/AbcSize
 
@@ -156,16 +181,16 @@ module Clusters
         # @step: provision the bootstrap
         info "attempting to bootstrap the cluster: #{name}"
         Clusters::Providers::Bootstrap.new(name, kube, config).bootstrap
-        ingress = @client.get('loki-grafana', 'loki', 'ingresses', version: 'extensions/v1beta1')
-        address = ingress.status.loadBalancer.ingress.first.ip
 
         # @step: update the dns record for the ingress
         unless (config[:grafana_hostname] || '').empty?
-          if !address.nil? && !address.empty?
+          # Get the ingress resource and extract the load balancer ip address
+          ingress = @client.get('loki-grafana', 'loki', 'ingresses', version: 'extensions/v1beta1')
+
+          unless ingress.status.loadBalancer.ingress.empty?
+            address = ingress.status.loadBalancer.ingress.first.ip
             info "adding a dns record for #{config[:grafana_hostname]} => #{address}"
-            dns(config[:grafana_hostname].split('.').first, address, config[:domain])
-          else
-            info 'cloud ingress controller has failed to provision load balancer'
+            dns(hostname(config[:grafana_hostname]), address, config[:domain])
           end
         end
 
@@ -178,7 +203,6 @@ module Clusters
           config: config,
           services: {
             grafana: {
-              address: address,
               hostname: config[:grafana_hostname]
             }
           }
@@ -187,12 +211,7 @@ module Clusters
       # rubocop:enable Metrics/AbcSize
 
       # validate is responsible for validating the options
-      def validate(options)
-        %i[name region machine_type ssh_key].each do |x|
-          raise ArgumentError, "you must specify the #{x} options" unless options.key?(x)
-        end
-        raise ArgumentError, "the domain: #{options[:domain]} does not exist" unless domain?(options[:domain])
-      end
+      def validate(options); end
 
       # cluster_template is responsible for rendering the template for ARM
       def cluster_template(config)
@@ -205,7 +224,7 @@ module Clusters
             - type: Microsoft.ContainerService/managedClusters
               name: <%= context[:name] %>
               apiVersion: '2019-06-01'
-              location: <%= context[:region] %>
+              location: #{@region}
               tags:
                 cluster: <%= context[:name] %>
               properties:
