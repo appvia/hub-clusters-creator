@@ -125,6 +125,11 @@ module Clusters
                 enabled: false
                 server:
                   fullnameOverride: prometheus-server
+                nodeExporter:
+                  podSecurityPolicy:
+                    enabled: true
+                networkPolicy:
+                  enabled: true
               grafana:
                 enabled: true
                 image:
@@ -143,6 +148,8 @@ module Clusters
                   hosts:
                     - <%= context[:grafana_hostname] %>
                   path: '/*'
+                networkPolicy:
+                  enabled: true
                 persistence:
                   enabled: false
                   accessModes:
