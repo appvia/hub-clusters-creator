@@ -6,7 +6,7 @@ required:
 properties:
   domain:
     $id: '#/properties/domain'
-    tags: default
+    tag: default
     type: string
     title: DNS Domain
     default: ''
@@ -18,7 +18,7 @@ properties:
 
   size:
     $id: '#/properties/size'
-    tags: default
+    tag: default
     type: integer
     title: Initial Node Size
     default: 1
@@ -30,7 +30,7 @@ properties:
 
   max_size:
     $id: '#/properties/max_size'
-    tags: default
+    tag: default
     type: integer
     title: Max Size
     default: 10
@@ -42,7 +42,7 @@ properties:
 
   disk_size_gb:
     $id: '#/properties/disk_size_gb'
-    tags: default
+    tag: default
     type: integer
     title: Compute Disk Size (GB)
     default: 100
@@ -53,7 +53,7 @@ properties:
 
   github_client_id:
     $id: '#/properties/github_client_id'
-    tags: default
+    tag: default
     type: string
     title: Github Client ID
     default: ''
@@ -65,7 +65,7 @@ properties:
 
   github_client_secret:
     $id: '#/properties/github_client_secret'
-    tags: default
+    tag: default
     type: string
     title: Github Client Secret
     default: ''
@@ -77,6 +77,7 @@ properties:
 
   grafana_disk_size:
     $id: '#/properties/grafana_disk_size'
+    tag: advanced
     type: integer
     title: Grafana Disk Size
     default: 10
@@ -88,7 +89,7 @@ properties:
 
   grafana_hostname:
     $id: '#/properties/grafana_hostname'
-    tags: default
+    tag: default
     type: string
     title: Grafana Hostname
     default: 'grafana'
@@ -101,7 +102,7 @@ properties:
 
   grafana_version:
     $id: '#/properties/grafana_version'
-    tags: advanced
+    tag: advanced
     type: string
     title: Grafana Version
     default: '6.2.5'

@@ -10,7 +10,7 @@ required:
 properties:
   machine_type:
     $id: '#/properties/machine_type'
-    tags: ['default']
+    tag: default
     type: string
     title: Machine Type
     description: >
@@ -21,7 +21,7 @@ properties:
 
   services_ipv4_cidr:
     $id: '#/properties/services_ipv4_cidr'
-    tags: ['advanced']
+    tag: advanced
     type: string
     title: Cluster Services CIDR
     default: ''
@@ -34,7 +34,7 @@ properties:
 
   ssh_key:
     $id: '#/properties/ssh_key'
-    tags: ['default']
+    tag: default
     type: string
     title: SSH Public Key
     default: ''
@@ -46,7 +46,7 @@ properties:
 
   version:
     $id: '#/properties/version'
-    tags: ['default']
+    tag: default
     type: string
     title: Initial Kubernetes Version
     default: '1.14.3'
