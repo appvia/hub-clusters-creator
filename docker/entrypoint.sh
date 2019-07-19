@@ -66,8 +66,14 @@ deploy-bundles() {
     info "installing the helm charts"
     while IFS=',' read chart namespace options; do
       namespace=${namespace:-"default"}
-      info "installing chart: ${chart}, namespace: ${namespace}, options: ${options}"
-      helm install --wait ${chart} --namespace ${namespace} ${options} || return 1
+      name=${chart%%/*}
+      if helm ls -q | grep ^${name}; then
+        info "installing chart: ${chart}, namespace: ${namespace}, options: ${options}"
+        helm upgrade --wait ${chart} --namespace ${namespace} ${options} || return 1
+      else
+        info "upgrading chart: ${chart}, namespace: ${namespace}, options: ${options}"
+        helm install --wait ${chart} --namespace ${namespace} ${options} || return 1
+      fi
     done < <(cat ${HELM_BUNDLES})
   fi
 }
