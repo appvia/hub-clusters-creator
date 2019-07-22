@@ -48,6 +48,6 @@ module Clusters
   end
 
   def self.provider?(name)
-    Clusters::Agent.providers.include(name)
+    Clusters::Agent.providers.key?(name)
   end
 end
