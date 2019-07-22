@@ -27,15 +27,15 @@ module Clusters
     Clusters::VERSION
   end
 
-  def self.new(provider)
-    Clusters::Agent.new(provider)
+  def self.new(name)
+    Clusters::Agent.new(name)
   end
 
-  def self.defaults(provider)
-    Clusters::Agent.defaults(provider)
+  def self.defaults(name)
+    Clusters::Agent.defaults(name)
   end
 
-  def self.providers
+  def self.options
     v = {}
     %w[aks gke].each do |x|
       v[x] = Clusters.schema(x)
@@ -43,11 +43,11 @@ module Clusters
     v
   end
 
-  def self.schema(provider)
-    Clusters::Agent.schema(provider)
+  def self.schema(name)
+    Clusters::Agent.schema(name)
   end
 
   def self.provider?(name)
-    Clusters::Agent.providers.key?(name)
+    Clusters.providers.key?(name)
   end
 end
