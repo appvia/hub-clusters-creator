@@ -36,7 +36,11 @@ module Clusters
   end
 
   def self.providers
-    %w[aks gke]
+    v = {}
+    %w[aks gke].each do |x|
+      v[x] = Clusters.schema(x)
+    end
+    v
   end
 
   def self.schema(provider)

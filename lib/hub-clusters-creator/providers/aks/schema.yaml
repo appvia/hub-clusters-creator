@@ -1,11 +1,66 @@
 ---
 type: object
 title: Azure AKS Cluster Configuration
+description: >
+  Create an Azure AKS managed kubernetes cluster
 required:
   - machine_type
   - services_ipv4_cidr
   - ssh_key
   - version
+
+config:
+  client_id:
+    $id: '#/config/client_id'
+    type: string
+    title: Service Principal Client ID
+    description: >
+      The associated client id from the service principal account you are
+      using to speak to the Azure API.
+    default: ''
+    pattern: ^.*$
+
+  client_secret:
+    $id: '#/config/client_secret'
+    type: string
+    title: Service Principal Client Secret
+    description: >
+      The client secret of the service principal being used to provision
+      the resources with.
+    default: ''
+    pattern: ^.*$
+
+  region:
+    $id: '#/config/region'
+    type: string
+    title: Azure Compute Region
+    description: >
+      The geographical region which you wish to build the cluster with.
+    default: ''
+    examples:
+      - uksouth
+    pattern: ^.*$
+
+  subscription:
+    $id: '#/config/subscription'
+    type: string
+    title: Subsription
+    description: >
+      The Azure client subscription you are using to provison the resources
+      under.
+    default: ''
+    pattern: ^.*$
+
+  tenant:
+    $id: '#/config/tenant'
+    type: string
+    title: Tenant ID
+    description: >
+      The application tenant id from the application registration / service
+      principal you are using. This can be found under the Application
+      Registration tab in the Azure portal
+    default: ''
+    pattern: ^.*$
 
 properties:
   machine_type:
