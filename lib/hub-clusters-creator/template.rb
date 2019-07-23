@@ -18,7 +18,7 @@
 
 require 'erb'
 
-module Clusters
+module HubClustersCreator
   module Utils
     # Template is a collection of erb template
     module Template

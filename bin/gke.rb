@@ -25,7 +25,7 @@ account = File.read('account.json')
 region = 'europe-west2'
 project = 'gke-learning-242311'
 
-creator = Clusters.new(
+creator = HubClustersCreator.new(
   account: account,
   provider: 'gke',
   project: project,

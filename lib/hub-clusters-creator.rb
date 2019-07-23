@@ -22,32 +22,28 @@ require_relative 'hub-clusters-creator/agent'
 require_relative 'hub-clusters-creator/version'
 
 # Clusters providers the wrapper to the providers
-module Clusters
+module HubClustersCreator
   def self.version
-    Clusters::VERSION
+    HubClustersCreator::VERSION
   end
 
   def self.new(name)
-    Clusters::Agent.new(name)
+    HubClustersCreator::Agent.new(name)
   end
 
   def self.defaults(name)
-    Clusters::Agent.defaults(name)
+    HubClustersCreator::Agent.defaults(name)
   end
 
-  def self.options
-    v = {}
-    %w[aks gke].each do |x|
-      v[x] = Clusters.schema(x)
+  def self.schema
+    o = []
+    HubClustersCreator::Agent.providers.each do |x|
+      o.push(
+        id: x,
+        init_options: HubClustersCreator::Agent.provider_schema(x),
+        provision_options: HubClustersCreator::Agent.cluster_schema(x)
+      )
     end
-    v
-  end
-
-  def self.schema(name)
-    Clusters::Agent.schema(name)
-  end
-
-  def self.provider?(name)
-    Clusters.providers.key?(name)
+    o
   end
 end

@@ -1,15 +1,16 @@
 ---
 type: object
-title: Azure AKS Cluster Configuration
+title: Azure AKS Provider configuration
 description: >
-  Create an Azure AKS managed kubernetes cluster
+  Defines the configuration required to initialize the provider.
 required:
-  - machine_type
-  - services_ipv4_cidr
-  - ssh_key
-  - version
+  - client_id
+  - client_secret
+  - region
+  - subscription
+  - tenant
 
-config:
+properties:
   client_id:
     $id: '#/config/client_id'
     type: string
@@ -61,6 +62,17 @@ config:
       Registration tab in the Azure portal
     default: ''
     pattern: ^.*$
+
+---
+type: object
+title: Azure AKS Cluster configuration
+description: >
+  Create an Azure AKS managed kubernetes cluster
+required:
+  - machine_type
+  - services_ipv4_cidr
+  - ssh_key
+  - version
 
 properties:
   machine_type:

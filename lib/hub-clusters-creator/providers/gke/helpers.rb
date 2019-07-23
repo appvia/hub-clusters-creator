@@ -17,7 +17,7 @@
 #
 
 # rubocop:disable Metrics/LineLength,Metrics/MethodLength,Metrics/ModuleLength
-module Clusters
+module HubClustersCreator
   module Providers
     # GCP is the namespace
     module GCP
@@ -256,7 +256,7 @@ module Clusters
 end
 
 # rubocop:disable Metrics/LineLength,Metrics/MethodLength
-module Clusters
+module HubClustersCreator
   module Providers
     # GCP namespaces the GCP methods
     module GCP

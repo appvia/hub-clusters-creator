@@ -1,29 +1,15 @@
 ---
 type: object
-title: GKE Cluster
+title: GKE Provider Configuration
 description: >
-  Provides the ability to create a fully managed GKE cluster within GCP.
+  Defined the provider configuration options required to initialize the
+  provider integration
 required:
-  - description
-  - disk_size_gb
-  - enable_autoscaler
-  - enable_autoupgrade
-  - enable_binary_authorization
-  - enable_horizontal_pod_autoscaler
-  - enable_http_loadbalancer
-  - enable_istio
-  - enable_logging
-  - enable_monitoring
-  - enable_private_endpoint
-  - enable_private_network
-  - image_type
-  - machine_type
-  - maintenance_window
-  - network
-  - subnetwork
-  - version
+  - account
+  - project
+  - region
 
-config:
+properties:
   account:
     $id: '#/config/account'
     type: string
@@ -55,6 +41,31 @@ config:
     examples:
       - europe-west2
     pattern: ^.*$
+
+---
+type: object
+title: GKE Cluster configuration
+description: >
+  Provides the ability to create a fully managed GKE cluster within GCP.
+required:
+  - description
+  - disk_size_gb
+  - enable_autoscaler
+  - enable_autoupgrade
+  - enable_binary_authorization
+  - enable_horizontal_pod_autoscaler
+  - enable_http_loadbalancer
+  - enable_istio
+  - enable_logging
+  - enable_monitoring
+  - enable_private_endpoint
+  - enable_private_network
+  - image_type
+  - machine_type
+  - maintenance_window
+  - network
+  - subnetwork
+  - version
 
 properties:
   authorized_master_cidrs:

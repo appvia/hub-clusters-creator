@@ -20,7 +20,7 @@ $LOAD_PATH.unshift File.join(File.dirname(__FILE__), '.', '../lib')
 
 require 'hub-clusters-creator'
 
-creator = Clusters.new(
+creator = HubClustersCreator.new(
   client_id: ENV['AKS_CLIENT_ID'],
   client_secret: ENV['AKS_CLIENT_SECRET'],
   provider: 'aks',

@@ -19,13 +19,13 @@ require 'hub-clusters-creator/template'
 require 'hub-clusters-creator/logging'
 
 # rubocop:disable Metrics/MethodLength,Metrics/LineLength
-module Clusters
+module HubClustersCreator
   module Providers
     # Bootstrap the provider of the bootstrap job
     # rubocop:disable Metrics/ClassLength
     class Bootstrap
       include Logging
-      include Clusters::Utils::Template
+      include HubClustersCreator::Utils::Template
 
       DEFAULT_CLUSTER_ADMIN_ROLE = <<~YAML
         apiVersion: v1
@@ -185,7 +185,7 @@ module Clusters
                     token_url: https://github.com/login/oauth/access_token
                   <%- end -%>
         YAML
-        Clusters::Utils::Template::Render.new(config).render(template)
+        HubClustersCreator::Utils::Template::Render.new(config).render(template)
       end
 
       # generate_bootstrap_job is responsible for generating the bootstrap job

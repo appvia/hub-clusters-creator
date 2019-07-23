@@ -25,23 +25,29 @@ require 'hub-clusters-creator/providers/aks/azure.rb'
 require 'hub-clusters-creator/providers/gke/gke.rb'
 
 # rubocop:disable Metrics/MethodLength,Metrics/LineLength
-module Clusters
+module HubClustersCreator
   # Agent is the main agent class
   class Agent
     include Errors
     include Logging
 
+    # rubocop:disable Metrics/AbcSize
     def initialize(provider)
       @provider_name = provider[:provider]
+
+      # @step: validate the provider configuration
+      JsonSchema.parse!(HubClustersCreator::Agent.provider_schema(@provider_name)).validate(provider)
+
+      # @step: create and return a provider instance
       case @provider_name
       when 'gke'
-        @provider = Clusters::Providers::GKE.new(
+        @provider = HubClustersCreator::Providers::GKE.new(
           account: provider[:account],
           project: provider[:project],
           region: provider[:region]
         )
       when 'aks'
-        @provider = Clusters::Providers::AKS.new(
+        @provider = HubClustersCreator::Providers::AKS.new(
           client_id: provider[:client_id],
           client_secret: provider[:client_secret],
           region: provider[:region],
@@ -52,11 +58,17 @@ module Clusters
         raise ArgumentError, "cloud provider: #{@provider_name} not supported"
       end
     end
+    # rubocop:enable Metrics/AbcSize
+
+    # providers provides a list of providers
+    def self.providers
+      %w[aks gke]
+    end
 
     # defaults builds the default from the schema
-    def self.defaults(provider)
+    def self.defaults(name)
       values = {}
-      schema(provider)['properties'].reject { |x, _v| x == 'authorized_master_cidrs' }.each do |k, v|
+      cluster_schema(name)['properties'].reject { |x, _v| x == 'authorized_master_cidrs' }.each do |k, v|
         values[k.to_sym] = v['default']
       end
       # @TODO find a better way of doing this
@@ -66,17 +78,30 @@ module Clusters
       values
     end
 
-    # schema returns the json schema defining all the options we support
-    def self.schema(name)
-      base = "#{__dir__}/providers"
-      path = base + "/#{name}/schema.yaml"
-      main = YAML.safe_load(File.read(base + '/schema.yaml'))
+    # provider_schema returns the provider schema
+    def self.provider_schema(name)
+      schemas(name).first
+    end
 
-      raise ArgumentError, 'the provider schema does not supported' unless File.exist?(path)
+    # cluster_schema returns a cluster schema for a specific provider
+    def self.cluster_schema(name)
+      schemas(name).last
+    end
 
-      main.deep_merge!(YAML.safe_load(File.read(path)))
+    # schemas returns the json schemais defining the providers configuration schema and the
+    # cluster schema for tha cloud provider
+    def self.schemas(name)
+      file = "#{__dir__}/providers/#{name}/schema.yaml"
+      raise ArgumentError, "provider: '#{name}' is not supported" unless File.exist?(file)
 
-      main
+      # loads and parses both the provider and cluster schema
+      provider_schemas = YAML.load_stream(File.read(file))
+      # load and parse the base schema which is used across all providers
+      provider_base = YAML.safe_load(File.read("#{__dir__}/providers/schema.yaml"))
+      # we deep merge the provider with the defaults
+      provider_schemas.last.deep_merge(provider_base)
+
+      provider_schemas
     end
 
     # destroy is responsible is tearing down the cluster
@@ -85,14 +110,17 @@ module Clusters
     end
 
     # provision is responsible for provisioning the cluster
-    # rubocop:disable Lint/RescueException
+    # rubocop:disable Lint/RescueException, Metrics/AbcSize
     def provision(options)
       name = options[:name]
-      config = Clusters.defaults(@provider_name).merge(options)
+      config = HubClustersCreator.defaults(@provider_name).merge(options)
 
       # @step: provision the cluster if not already there
       begin
-        validate(config)
+        schema = HubClustersCreator::Agent.provider_schema(@provider_name)
+        # verify the options
+        JsonSchema.parse!(schema).validate(config)
+        # provision the cluster
         @provider.create(name, config)
       rescue InfrastructureError => e
         error "failed to provision the infrastructure: #{name}, error: #{e}"
@@ -108,15 +136,7 @@ module Clusters
         raise e
       end
     end
-    # rubocop:enable Lint/RescueException
-
-    private
-
-    def validate(config)
-      JsonSchema.parse!(Clusters.schema(@provider_name)).validate(config)
-    rescue StandardError => e
-      raise ConfigurationError, "configuration invalid, error: #{e}"
-    end
+    # rubocop:enable Lint/RescueException, Metrics/AbcSize
   end
 end
 # rubocop:enable Metrics/MethodLength,Metrics/LineLength
