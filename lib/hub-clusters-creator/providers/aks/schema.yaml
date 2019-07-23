@@ -9,6 +9,7 @@ required:
   - region
   - subscription
   - tenant
+additionalProperties: false
 
 properties:
   client_id:
