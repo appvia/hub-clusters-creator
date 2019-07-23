@@ -2,8 +2,21 @@
 required:
   - disk_size_gb
   - domain
+  - name
   - size
 properties:
+  name:
+    $id: '#/properties/name'
+    tag: default
+    type: string
+    default: ''
+    description: >
+      The name of the cluster you are provision within the cloud provider
+    examples:
+      - dev
+      - prod
+    pattern: ^.*$
+
   domain:
     $id: '#/properties/domain'
     tag: default
