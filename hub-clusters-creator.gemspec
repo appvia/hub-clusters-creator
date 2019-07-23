@@ -8,7 +8,7 @@ require 'version'
 
 Gem::Specification.new do |s|
   s.name        = 'hub-clusters-creator'
-  s.version     = Clusters::VERSION
+  s.version     = HubClustersCreator::VERSION
   s.platform    = Gem::Platform::RUBY
   s.date        = '2019-08-02'
   s.authors     = ['Rohith Jayawardene']
