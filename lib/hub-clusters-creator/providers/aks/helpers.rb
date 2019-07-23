@@ -17,7 +17,7 @@
 #
 
 # rubocop:disable Metrics/LineLength,Metrics/MethodLength
-module Clusters
+module HubClustersCreator
   module Providers
     # Azure is the AKS namespace
     module Azure

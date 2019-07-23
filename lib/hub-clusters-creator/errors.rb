@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # rubocop:disable Metrics/LineLength
-module Clusters
+module HubClustersCreator
   # Errors is collection of custom errors and exceptions
   module Errors
     # InfrastructureError defines an error occurred creating or configuring the cluster

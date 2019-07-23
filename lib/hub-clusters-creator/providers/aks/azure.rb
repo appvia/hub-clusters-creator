@@ -25,7 +25,7 @@ require 'azure_mgmt_dns'
 require 'uri'
 
 # rubocop:disable Metrics/ClassLength,Metrics/LineLength,Metrics/MethodLength
-module Clusters
+module HubClustersCreator
   module Providers
     # AKS is the AKS provider
     class AKS
@@ -34,7 +34,7 @@ module Clusters
       include ::Azure::ContainerService::Mgmt::V2019_04_01
       include ::Azure::Dns::Mgmt::V2017_10_01
       include Azure::Helpers
-      include Clusters::Utils::Template
+      include HubClustersCreator::Utils::Template
       include Errors
       include Logging
 
@@ -171,7 +171,7 @@ module Clusters
         endpoint = URI(kc['clusters'].first['cluster']['server']).hostname
 
         # @step: provision a kubernetes client for this cluster
-        kube = Clusters::Kube.new(endpoint,
+        kube = HubClustersCreator::Kube.new(endpoint,
                                   client_certificate: kc['users'].first['user']['client-certificate-data'],
                                   client_key: kc['users'].first['user']['client-key-data'])
 
@@ -180,7 +180,7 @@ module Clusters
 
         # @step: provision the bootstrap
         info "attempting to bootstrap the cluster: #{name}"
-        Clusters::Providers::Bootstrap.new(name, kube, config).bootstrap
+        HubClustersCreator::Providers::Bootstrap.new(name, kube, config).bootstrap
 
         # @step: update the dns record for the ingress
         unless (config[:grafana_hostname] || '').empty?
@@ -264,7 +264,7 @@ module Clusters
                   networkPolicy: azure
                   serviceCidr: <%= context[:services_ipv4_cidr].empty? ? '10.0.0.0/16' : context[:services_ipv4_cidr] %>
         YAML
-        Clusters::Utils::Template::Render.new(config).render(template)
+        HubClustersCreator::Utils::Template::Render.new(config).render(template)
       end
     end
   end

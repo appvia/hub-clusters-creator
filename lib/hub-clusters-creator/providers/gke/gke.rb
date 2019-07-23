@@ -27,7 +27,7 @@ require 'hub-clusters-creator/providers/bootstrap'
 require 'hub-clusters-creator/providers/gke/helpers'
 
 # rubocop:disable Metrics/ClassLength,Metrics/LineLength,Metrics/MethodLength
-module Clusters
+module HubClustersCreator
   module Providers
     # GKE provides the GKE implmentation
     class GKE
@@ -175,7 +175,7 @@ module Clusters
       def provision_cluster(name, config)
         info "waiting for the master api endpoint to be available on cluster: #{name}"
         thing = cluster(name)
-        @client = Clusters::Kube.new(thing.endpoint, token: authorize.access_token)
+        @client = HubClustersCreator::Kube.new(thing.endpoint, token: authorize.access_token)
         @client.wait_for_kubeapi
 
         # @step: if psp is enabled we need to add the roles and bindings
@@ -184,7 +184,7 @@ module Clusters
         @client.kubectl(DEFAULT_PSP_CLUSTERROLE_BINDING)
 
         # @step: bootstrap the cluster and wait
-        Clusters::Providers::Bootstrap.new(name, @client, config).bootstrap
+        HubClustersCreator::Providers::Bootstrap.new(name, @client, config).bootstrap
 
         ingress = @client.get('loki-grafana', 'loki', 'ingresses', version: 'extensions/v1beta1')
         address = ingress.status.loadBalancer.ingress.first.ip

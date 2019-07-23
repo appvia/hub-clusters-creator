@@ -17,7 +17,7 @@
 
 require 'k8s-client'
 
-module Clusters
+module HubClustersCreator
   # Kube is a collection of methods for interacting with the kubernetes api
   # rubocop:disable Metrics/LineLength,Metrics/MethodLength,Metrics/ParameterLists
   class Kube

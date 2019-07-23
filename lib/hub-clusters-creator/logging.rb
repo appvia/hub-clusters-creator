@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-module Clusters
+module HubClustersCreator
   # Logging is few helper functions for logging
   module Logging
     def info(string, options = {})
