@@ -51,6 +51,7 @@ description: >
 required:
   - description
   - disk_size_gb
+  - domain
   - enable_autoscaler
   - enable_autoupgrade
   - enable_binary_authorization
@@ -64,7 +65,9 @@ required:
   - image_type
   - machine_type
   - maintenance_window
+  - name
   - network
+  - size
   - subnetwork
   - version
 
@@ -98,6 +101,127 @@ properties:
           examples:
             - 0.0.0.0/0
           pattern: ^([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}$
+
+  name:
+    $id: '#/properties/name'
+    tag: default
+    type: string
+    default: ''
+    description: >
+      The name of the cluster you are provision within the cloud provider
+    examples:
+      - dev
+      - prod
+    pattern: ^.*$
+
+  domain:
+    $id: '#/properties/domain'
+    tag: default
+    type: string
+    title: DNS Domain
+    default: ''
+    description: >
+      The dns domain which the cluster is using; this mist be accessible from
+      with inside the project.
+    examples:
+      - 'example.com'
+
+  github_client_id:
+    $id: '#/properties/github_client_id'
+    tag: default
+    type: string
+    title: Github Client ID
+    default: ''
+    description: >
+      The Github client id for the oauth2 application
+    examples:
+      - ''
+    pattern: ^(.*)$
+
+  github_client_secret:
+    $id: '#/properties/github_client_secret'
+    tag: default
+    type: string
+    title: Github Client Secret
+    default: ''
+    description: >
+      The Github client secret taken from the oauth2 application
+    examples:
+      - ''
+    pattern: ^(.*)$
+
+  grafana_disk_size:
+    $id: '#/properties/grafana_disk_size'
+    tag: advanced
+    type: integer
+    title: Grafana Disk Size
+    default: 10
+    description: >
+      The size of the disk used for grafana instance
+    examples:
+      - 10
+      - 100
+
+  grafana_hostname:
+    $id: '#/properties/grafana_hostname'
+    tag: default
+    type: string
+    title: Grafana Hostname
+    default: 'grafana'
+    description: >
+      The dns hostname which grafana should be configured to respond to.
+    examples:
+      - grafana
+      - metrics
+    pattern: ^(.*)$
+
+  grafana_version:
+    $id: '#/properties/grafana_version'
+    tag: advanced
+    type: string
+    title: Grafana Version
+    default: '6.2.5'
+    description: >
+      The version of the grafana which should be installed.
+    examples:
+      - 6.2.5
+    pattern: ^(.*)$
+
+  size:
+    $id: '#/properties/size'
+    tag: default
+    type: integer
+    title: Initial Node Size
+    default: 1
+    description: >
+      The number of nodes per zone which should exist in the cluster.
+    examples:
+      - 1
+      - 10
+
+  max_size:
+    $id: '#/properties/max_size'
+    tag: default
+    type: integer
+    title: Max Size
+    default: 10
+    description: >
+      Assuming the autoscaler is enabled this is the maximum number
+      nodes permitted.
+    examples:
+      - 10
+
+  disk_size_gb:
+    $id: '#/properties/disk_size_gb'
+    tag: default
+    type: integer
+    title: Compute Disk Size (GB)
+    default: 100
+    description: >
+      Is the size of the disk used by the compute nodes
+    examples:
+      - 100
+
 
   cluster_ipv4_cidr:
     $id: '#/properties/cluster_ipv4_cidr'

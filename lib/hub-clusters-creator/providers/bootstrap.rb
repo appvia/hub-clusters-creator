@@ -20,6 +20,7 @@ require 'hub-clusters-creator/logging'
 
 # rubocop:disable Metrics/MethodLength,Metrics/LineLength
 module HubClustersCreator
+  # Providers is the namespace of the cloud providers
   module Providers
     # Bootstrap the provider of the bootstrap job
     # rubocop:disable Metrics/ClassLength
@@ -221,6 +222,20 @@ module HubClustersCreator
       end
     end
     # rubocop:enable Metrics/ClassLength
+
+    private
+
+    # validate is responsible for validating the options
+    # rubocop:disable Style/GuardClause
+    def validate(config)
+      if config[:github_client_id] && config[:github_client_secret].nil?
+        raise ArgumentError, 'you have specifed the github client id but not the secret'
+      end
+      if config[:github_client_secret] && config[:github_client_id].nil?
+        raise ArgumentError, 'you have specifed the github client secret but not the client id'
+      end
+    end
+    # rubocop:enable Style/GuardClause
   end
 end
 # rubocop:enable Metrics/MethodLength,Metrics/LineLength

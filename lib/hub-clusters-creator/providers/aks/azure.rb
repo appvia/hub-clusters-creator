@@ -172,8 +172,8 @@ module HubClustersCreator
 
         # @step: provision a kubernetes client for this cluster
         kube = HubClustersCreator::Kube.new(endpoint,
-                                  client_certificate: kc['users'].first['user']['client-certificate-data'],
-                                  client_key: kc['users'].first['user']['client-key-data'])
+                                            client_certificate: kc['users'].first['user']['client-certificate-data'],
+                                            client_key: kc['users'].first['user']['client-key-data'])
 
         info "waiting for the kubeapi to become available at: #{endpoint}"
         kube.wait_for_kubeapi
@@ -185,13 +185,13 @@ module HubClustersCreator
         # @step: update the dns record for the ingress
         unless (config[:grafana_hostname] || '').empty?
           # Get the ingress resource and extract the load balancer ip address
-          ingress = @client.get('loki-grafana', 'loki', 'ingresses', version: 'extensions/v1beta1')
+          # ingress = @client.get('loki-grafana', 'loki', 'ingresses', version: 'extensions/v1beta1')
 
-          unless ingress.status.loadBalancer.ingress.empty?
-            address = ingress.status.loadBalancer.ingress.first.ip
-            info "adding a dns record for #{config[:grafana_hostname]} => #{address}"
-            dns(hostname(config[:grafana_hostname]), address, config[:domain])
-          end
+          #          unless ingress.status.loadBalancer.ingress.empty?
+          #            address = ingress.status.loadBalancer.ingress.first.ip
+          #            info "adding a dns record for #{config[:grafana_hostname]} => #{address}"
+          #            dns(hostname(config[:grafana_hostname]), address, config[:domain])
+          #          end
         end
 
         {
