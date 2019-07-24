@@ -25,7 +25,6 @@ Gem::Specification.new do |s|
   s.add_dependency('azure_mgmt_container_service', '~> 0.18.5')
   s.add_dependency('azure_mgmt_dns', '~> 0.17.4')
   s.add_dependency('azure_mgmt_resources', '~> 0.17.6')
-  s.add_dependency('deep_merge', '~> 1.2.1')
   s.add_dependency('google-api-client', '~> 0.30')
   s.add_dependency('googleauth', '~> 0.7')
   s.add_dependency('json_schema', '~> 0.20')

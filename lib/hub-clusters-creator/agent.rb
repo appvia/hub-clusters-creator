@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-require 'deep_merge'
 require 'json'
 require 'json_schema'
 
@@ -95,13 +94,7 @@ module HubClustersCreator
       raise ArgumentError, "provider: '#{name}' is not supported" unless File.exist?(file)
 
       # loads and parses both the provider and cluster schema
-      provider_schemas = YAML.load_stream(File.read(file))
-      # load and parse the base schema which is used across all providers
-      provider_base = YAML.safe_load(File.read("#{__dir__}/providers/schema.yaml"))
-      # we deep merge the provider with the defaults
-      provider_schemas.last.deep_merge(provider_base)
-
-      provider_schemas
+      YAML.load_stream(File.read(file))
     end
 
     # destroy is responsible is tearing down the cluster
