@@ -76,6 +76,7 @@ properties:
     $id: '#/properties/name'
     tag: default
     type: string
+    title: Cluster Name
     default: ''
     description: >
       The name of the cluster you are provision within the cloud provider
