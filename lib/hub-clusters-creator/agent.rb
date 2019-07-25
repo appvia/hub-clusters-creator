@@ -59,15 +59,10 @@ module HubClustersCreator
     end
     # rubocop:enable Metrics/AbcSize
 
-    # providers provides a list of providers
-    def self.providers
-      %w[aks gke]
-    end
-
     # defaults builds the default from the schema
-    def self.defaults(name)
+    def defaults(name)
       values = {}
-      cluster_schema(name)['properties'].reject { |x, _v| x == 'authorized_master_cidrs' }.each do |k, v|
+      HubClustersCreator::Agent.schema(name)['properties'].reject { |x, _v| x == 'authorized_master_cidrs' }.each do |k, v|
         values[k.to_sym] = v['default']
       end
       # @TODO find a better way of doing this
@@ -77,24 +72,48 @@ module HubClustersCreator
       values
     end
 
-    # provider_schema returns the provider schema
-    def self.provider_schema(name)
-      schemas(name).first
+    # providers provides a list of providers
+    def self.providers
+      HubClustersCreator::Agent.providers_schema['providers'].keys
     end
 
-    # cluster_schema returns a cluster schema for a specific provider
-    def self.cluster_schema(name)
-      schemas(name).last
+    # config returns the provider configuration
+    def self.config(name)
+      HubClustersCreator::Agent.providers_schema['providers'][name]
     end
 
     # schemas returns the json schemais defining the providers configuration schema and the
     # cluster schema for tha cloud provider
-    def self.schemas(name)
-      file = "#{__dir__}/providers/#{name}/schema.yaml"
-      raise ArgumentError, "provider: '#{name}' is not supported" unless File.exist?(file)
+    def self.schema(name)
+      provider = {}
+      # load and parse the providers configuration
+      x = HubClustersCreator::Agent.providers_schema
+      raise ArgumentError, 'provider is not supported' unless x['providers'].key?(name)
 
-      # loads and parses both the provider and cluster schema
-      YAML.load_stream(File.read(file))
+      # retrieve the defaults for this provider
+      overrides = x['defaults'][name]['defaults']
+      provider = x['schema']
+      provider['required'] = x['defaults'][name]['required']
+      # filter the properties and retrieve this providers configuration,
+      # filling in any defaults
+      properties = {}
+      provider['properties'].each_pair do |k, v|
+        next if v.key?('provider') && !v['provider'].include?(name)
+        # fill in any defaults
+        v.delete('provider')
+        if overrides.key?(k)
+          v['examples'] = overrides[k]['examples']
+          v['default'] = overrides[k]['default']
+        end
+        properties[k] = v
+      end
+      provider['properties'] = properties
+
+      provider
+    end
+
+    def self.providers_schema
+      YAML.safe_load(File.read("#{__dir__}/providers/schema.yaml"))
     end
 
     # destroy is responsible is tearing down the cluster
@@ -110,7 +129,7 @@ module HubClustersCreator
 
       # @step: provision the cluster if not already there
       begin
-        schema = HubClustersCreator::Agent.cluster_schema(@provider_name)
+        schema = HubClustersCreator::Agent.schema(@provider_name)
         # verify the options
         JsonSchema.parse!(schema).validate(config)
         # provision the cluster

@@ -40,8 +40,8 @@ module HubClustersCreator
     HubClustersCreator::Agent.providers.each do |x|
       o.push(
         id: x,
-        init_options: HubClustersCreator::Agent.provider_schema(x),
-        provision_options: HubClustersCreator::Agent.cluster_schema(x)
+        init_options: HubClustersCreator::Agent.config(x),
+        provision_options: HubClustersCreator::Agent.schema(x)
       )
     end
     o
