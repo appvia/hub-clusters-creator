@@ -91,8 +91,8 @@ module HubClustersCreator
         end
         info 'bootstrap has successfully completed'
 
-        info 'waiting for grafana ingress load balancer to be provisioned'
         # @step: wait for the ingress to appaar and provision and grab the address
+        info 'waiting for grafana ingress load balancer to be provisioned'
         @client.wait('loki-grafana', 'loki', 'ingresses', version: 'extensions/v1beta1') do |x|
           x.status.loadBalancer.ingress.empty? ? false : true
         end
