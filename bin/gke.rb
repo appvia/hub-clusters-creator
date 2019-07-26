@@ -37,9 +37,8 @@ puts creator.provision(
   github_client_id: ENV['GITHUB_CLIENT_ID'],
   github_client_secret: ENV['GITHUB_CLIENT_SECRET'],
   github_organization: ENV['GITHUB_ORG'],
-  grafana_hostname: 'grafana.gkelearning.appvia.io',
+  grafana_hostname: 'grafana',
   grafana_ingress: true,
-  logging: true,
   machine_type: 'n1-standard-1',
   name: 'test',
   version: '1.13.7-gke.8'

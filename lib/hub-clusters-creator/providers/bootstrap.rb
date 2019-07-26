@@ -147,7 +147,7 @@ module HubClustersCreator
                 ingress:
                   enabled: true
                   hosts:
-                    - <%= context[:grafana_hostname] %>
+                    - <%= context[:grafana_hostname] %>.<%= context[:domain] %>
                   path: '/*'
                 networkPolicy:
                   enabled: true
@@ -158,8 +158,8 @@ module HubClustersCreator
                   size: <%= context[:grafana_disk_size] %><%= context[:grafana_disk_size].to_s.end_with?('Gi') ? '' : 'Gi' %>
                 grafana.ini:
                   server:
-                    domain: <%= context[:grafana_hostname] %>
-                    root_url: http://<%= context[:grafana_hostname] %>
+                    domain: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
+                    root_url: http://<%= context[:grafana_hostname] %>.<%= context[:domain] %>
                   paths:
                     data: /var/lib/grafana/data
                     logs: /var/log/grafana
