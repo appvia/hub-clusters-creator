@@ -198,6 +198,7 @@ module HubClustersCreator
           cluster: {
             ca: ca,
             endpoint: "https://#{endpoint}",
+            service_account: 'sysadmin',
             token: kube.account('sysadmin')
           },
           config: config,

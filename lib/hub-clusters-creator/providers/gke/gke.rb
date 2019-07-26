@@ -116,6 +116,7 @@ module HubClustersCreator
           cluster: {
             ca: c.master_auth.cluster_ca_certificate,
             endpoint: "https://#{c.endpoint}",
+            service_account: 'sysadmin',
             token: @client.account('sysadmin')
           },
           config: config,
