@@ -89,10 +89,11 @@ providers:
         type: string
         title: Service Account Credentials JSON
         description: ->
-          The credentials used to speak the GCP APIs; you create a service account
-          under the Cloud IAM within the project, adding the permissions 'Compute
-          Admin' role to the service account via IAM tab. Once done you can create
-          a key under 'Service Accounts' and copy and paste the JSON payload here.
+          The credentials used to speak the GCP APIs; you create a service
+          account under the Cloud IAM within the project, adding the
+          permissions 'Compute Admin' role to the service account via IAM
+          tab. Once done you can create a key under 'Service Accounts'
+          and copy and paste the JSON payload here.
         default: ''
         pattern: ^.*$
 
@@ -129,8 +130,8 @@ defaults:
       version:
         default: 1.14.3
         examples:
-          - latest
-          - 1.13.7-gke.8
+          - 1.14.3
+          - 1.13.0
     required:
       - disk_size_gb
       - domain
@@ -147,9 +148,10 @@ defaults:
         examples:
           - n1-standard-1
       version:
-        default: latest
+        default: 1.13.7-gke.8
         examples:
-          -
+          - 1.13.7-gke.8
+          - latest
     required:
       - description
       - disk_size_gb
