@@ -105,8 +105,8 @@ module HubClustersCreator
     # provision is responsible for provisioning the cluster
     # rubocop:disable Lint/RescueException, Metrics/AbcSize
     def provision(options)
-      name = options[:name]
-      config = HubClustersCreator.defaults(@provider_name).merge(options)
+      # step: merge in the defaults
+      config = HubClustersCreator.defaults(@provider_name).merge(options).transform_keys!(&:to_sym)
 
       # @step: provision the cluster if not already there
       begin
@@ -114,18 +114,18 @@ module HubClustersCreator
         # verify the options
         JsonSchema.parse!(schema).validate(config)
         # provision the cluster
-        @provider.create(name, config)
+        @provider.create(config[:name], config)
       rescue InfrastructureError => e
-        error "failed to provision the infrastructure: #{name}, error: #{e}"
+        error "failed to provision the infrastructure, error: #{e}"
         raise e
       rescue ConfigurationError => e
-        error "invalid configuration for cluster: #{name}, error: #{e}"
+        error "invalid configuration for cluster, error: #{e}"
         raise e
       rescue InitializerError => e
-        error "failed to initialize cluster: #{name}, error: #{e}"
+        error "failed to initialize cluster, error: #{e}"
         raise e
       rescue Exception => e
-        error "failed to provision the cluster: #{name}, error: #{e}"
+        error "failed to provision the cluster, error: #{e}"
         raise e
       end
     end
