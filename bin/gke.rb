@@ -25,24 +25,22 @@ account = File.read('account.json')
 region = 'europe-west2'
 project = 'gke-learning-242311'
 
-puts HubClustersCreator.schema.to_json
-
-#creator = HubClustersCreator.new(
-#  account: account,
-#  provider: 'gke',
-#  project: project,
-#  region: region
-#)
-#puts creator.provision(
-#  description: 'just a test',
-#  domain: 'gkelearning.appvia.io',
-#  github_client_id: ENV['GITHUB_CLIENT_ID'],
-#  github_client_secret: ENV['GITHUB_CLIENT_SECRET'],
-#  github_organization: ENV['GITHUB_ORG'],
-#  grafana_hostname: 'grafana.gkelearning.appvia.io',
-#  grafana_ingress: true,
-#  logging: true,
-#  machine_type: 'n1-standard-1',
-#  name: 'test',
-#  version: '1.13.7-gke.8'
-#)
+creator = HubClustersCreator.new(
+  account: account,
+  provider: 'gke',
+  project: project,
+  region: region
+)
+puts creator.provision(
+  description: 'just a test',
+  domain: 'gkelearning.appvia.io',
+  github_client_id: ENV['GITHUB_CLIENT_ID'],
+  github_client_secret: ENV['GITHUB_CLIENT_SECRET'],
+  github_organization: ENV['GITHUB_ORG'],
+  grafana_hostname: 'grafana.gkelearning.appvia.io',
+  grafana_ingress: true,
+  logging: true,
+  machine_type: 'n1-standard-1',
+  name: 'test',
+  version: '1.13.7-gke.8'
+)
