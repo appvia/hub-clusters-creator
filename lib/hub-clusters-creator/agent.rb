@@ -110,7 +110,7 @@ module HubClustersCreator
 
       # @step: provision the cluster if not already there
       begin
-        schema = HubClustersCreator::Agent.provider_schema(@provider_name)
+        schema = HubClustersCreator::Agent.cluster_schema(@provider_name)
         # verify the options
         JsonSchema.parse!(schema).validate(config)
         # provision the cluster
