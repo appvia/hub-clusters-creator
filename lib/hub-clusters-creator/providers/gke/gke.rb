@@ -215,13 +215,19 @@ module HubClustersCreator
         # @check if subnets exist - need to do something more clever
         # and check for overlapping subnety really but i can't find a gem
         network_checks = []
-        network_checks.push(config['cluster_ipv4_cidr']) if config['cluster_ipv4_cidr']
-        network_checks.push(config['master_ipv4_cidr_block']) if config['master_ipv4_cidr_block']
-        network_checks.push(config['services_ipv4_cidr']) if config['services_ipv4_cidr']
+        network_checks.push(config[:cluster_ipv4_cidr]) unless config[:cluster_ipv4_cidr].empty?
+        network_checks.push(config[:master_ipv4_cidr_block]) unless config[:master_ipv4_cidr_block].empty?
+        network_checks.push(config[:services_ipv4_cidr]) unless config[:services_ipv4_cidr].empty?
 
-        nets = networks
+        subnetworks = subnets(config[:network])
         network_checks.each do |n|
-          nets.each { |x| raise ConfigurationError, "network: #{n} already exists" if n == x.cidr }
+          subnetworks.each do |x|
+            raise ConfigurationError, "subnetwork: #{n} already exists" if x.ip_cidr_range.equal?(n)
+
+            x.secondary_ip_ranges.each do |j|
+              raise ConfigurationError, "subnetwork: #{n} already exists" if j.ip_cidr_range.equal?(n)
+            end
+          end
         end
 
         if config[:enable_private_network] && !config[:master_ipv4_cidr_block]

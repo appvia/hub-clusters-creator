@@ -295,7 +295,7 @@ module HubClustersCreator
 
         # subnet? checks if the subnet exists in the project, network and region
         def subnet?(name, network)
-          subnets(network).include?(name)
+          subnets(network).map(&:name).include?(name)
         end
 
         # dns is responsible for adding / updating a dns record in a zone
@@ -351,11 +351,9 @@ module HubClustersCreator
 
         # subnets returns a list of subnets in the network
         def subnets(network)
-          list = @compute.list_subnetworks(@project, @region).items.select do |x|
+          @compute.list_subnetworks(@project, @region).items.select do |x|
             x.network.end_with?(network)
-          end.map(&:name)
-          list.each { |x| yield x } if block_given?
-          list
+          end
         end
       end
     end
