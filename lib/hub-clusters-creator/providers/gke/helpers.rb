@@ -81,7 +81,7 @@ module HubClustersCreator
         def cluster(name)
           return nil unless cluster?(name)
 
-          clusters.select { |x| x.name = name }.first
+          clusters.select { |x| x.name == name }.first
         end
 
         # cluster? check if a gke cluster exists
@@ -286,10 +286,30 @@ module HubClustersCreator
           networks.items.map(&:name).include?(name)
         end
 
+        def network(name)
+          networks.items.select { |x| x.name == name }.first
+        end
+
         # networks returns a list of networks in the region and project
         def networks
-          list = @compute.list_networks(@project)
-          list.each { |x| yield x } if block_given?
+          @compute.list_networks(@project)
+        end
+
+        # peered_networks returns a list of peered destinations
+        def peered_networks(name)
+          raise ArgumentError, 'network does not exist' unless network?(name)
+
+          list = []
+          network(name).peerings.each do |x|
+            options = {
+              direction: 'incoming',
+              peering_name: x.name,
+              region: @region
+            }
+            @compute.list_network_peering_routes(@project, name, options).items.each do |p|
+              list.push(p)
+            end
+          end
           list
         end
 
