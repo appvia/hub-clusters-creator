@@ -150,7 +150,7 @@ module HubClustersCreator
           info "waiting for the cluster: '#{name}' to be created, operation: '#{operation.name}'"
           status = hold_for_operation(operation.name)
           unless status.status_message.nil?
-            raise InfrastructureError, "operation: '#{x.operation_type}' failed, error: #{x.status_message}"
+            raise InfrastructureError, "operation: '#{operation.operation_type}' failed, error: #{operation.status_message}"
           end
         end
         gke = cluster(name)
