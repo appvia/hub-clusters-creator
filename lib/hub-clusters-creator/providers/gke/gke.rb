@@ -211,38 +211,40 @@ module HubClustersCreator
         # @check the networking options
         raise ConfigurationError, 'the network does not exist' unless network?(config[:network])
         raise ConfigurationError, 'the subnetwork does not exist' unless subnet?(config[:subnetwork], config[:network]) && !config[:create_subnetwork]
-
-        # @check if subnets exist - need to do something more clever
-        # and check for overlapping subnety really but i can't find a gem
-        network_checks = []
-        network_checks.push(config[:cluster_ipv4_cidr]) unless config[:cluster_ipv4_cidr].empty?
-        network_checks.push(config[:services_ipv4_cidr]) unless config[:services_ipv4_cidr].empty?
-
         if config[:enable_private_network] && !config[:master_ipv4_cidr_block]
           raise ConfigurationError, 'you must specify a master_ipv4_cidr_block'
         end
 
-        if config[:enable_private_network]
-          network_checks.push(config[:master_ipv4_cidr_block]) unless config[:master_ipv4_cidr_block].empty?
-        end
+        # These checks only need to be run if the cluster doesn't exists already
+        unless cluster?(config[:name])
+          # @check if subnets exist - need to do something more clever
+          # and check for overlapping subnety really but i can't find a gem
+          network_checks = []
+          network_checks.push(config[:cluster_ipv4_cidr]) unless config[:cluster_ipv4_cidr].empty?
+          network_checks.push(config[:services_ipv4_cidr]) unless config[:services_ipv4_cidr].empty?
 
-        subnetworks = subnets(config[:network])
-        network_checks.each do |n|
-          subnetworks.each do |x|
-            raise ConfigurationError, "subnetwork: #{n} already exists" if x.ip_cidr_range.equal?(n)
+          if config[:enable_private_network]
+            network_checks.push(config[:master_ipv4_cidr_block]) unless config[:master_ipv4_cidr_block].empty?
+          end
 
-            x.secondary_ip_ranges.each do |j|
-              raise ConfigurationError, "subnetwork: #{n} already exists" if j.ip_cidr_range.equal?(n)
+          subnetworks = subnets(config[:network])
+          network_checks.each do |n|
+            subnetworks.each do |x|
+              raise ConfigurationError, "subnetwork: #{n} already exists" if x.ip_cidr_range.equal?(n)
+
+              x.secondary_ip_ranges.each do |j|
+                raise ConfigurationError, "subnetwork: #{n} already exists" if j.ip_cidr_range.equal?(n)
+              end
             end
           end
-        end
 
-        if config[:enable_private_network]
-          # @check for any conflicts in peering
-          peered_networks(config[:network]).each do |n|
-            network_checks.each do |x|
-              puts "checking #{x}, #{n.dest_range}"
-              raise ConfigurationError, "conflicting peered network: #{n.dest_range}" if n.dest_range == x
+          if config[:enable_private_network]
+            # @check for any conflicts in peering
+            peered_networks(config[:network]).each do |n|
+              network_checks.each do |x|
+                puts "checking #{x}, #{n.dest_range}"
+                raise ConfigurationError, "conflicting peered network: #{n.dest_range}" if n.dest_range == x
+              end
             end
           end
         end
