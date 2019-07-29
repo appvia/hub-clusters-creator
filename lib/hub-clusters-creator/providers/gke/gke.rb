@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-require 'google/apis/compute_v1'
+require 'google/apis/compute_beta'
 require 'google/apis/container_v1beta1'
 require 'google/apis/dns_v1'
 require 'googleauth'
@@ -72,7 +72,7 @@ module HubClustersCreator
       include Logging
 
       Container = Google::Apis::ContainerV1beta1
-      Compute = Google::Apis::ComputeV1
+      Compute = Google::Apis::ComputeBeta
       Dns = Google::Apis::DnsV1
 
       def initialize(provider)
@@ -216,8 +216,15 @@ module HubClustersCreator
         # and check for overlapping subnety really but i can't find a gem
         network_checks = []
         network_checks.push(config[:cluster_ipv4_cidr]) unless config[:cluster_ipv4_cidr].empty?
-        network_checks.push(config[:master_ipv4_cidr_block]) unless config[:master_ipv4_cidr_block].empty?
         network_checks.push(config[:services_ipv4_cidr]) unless config[:services_ipv4_cidr].empty?
+
+        if config[:enable_private_network] && !config[:master_ipv4_cidr_block]
+          raise ConfigurationError, 'you must specify a master_ipv4_cidr_block'
+        end
+
+        if config[:enable_private_network]
+          network_checks.push(config[:master_ipv4_cidr_block]) unless config[:master_ipv4_cidr_block].empty?
+        end
 
         subnetworks = subnets(config[:network])
         network_checks.each do |n|
@@ -230,8 +237,14 @@ module HubClustersCreator
           end
         end
 
-        if config[:enable_private_network] && !config[:master_ipv4_cidr_block]
-          raise ConfigurationError, 'you must specify a master_ipv4_cidr_block'
+        if config[:enable_private_network]
+          # @check for any conflicts in peering
+          peered_networks(config[:network]).each do |n|
+            network_checks.each do |x|
+              puts "checking #{x}, #{n.dest_range}"
+              raise ConfigurationError, "conflicting peered network: #{n.dest_range}" if n.dest_range == x
+            end
+          end
         end
 
         config
