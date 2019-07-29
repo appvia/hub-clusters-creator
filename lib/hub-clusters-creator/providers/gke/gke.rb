@@ -116,13 +116,14 @@ module HubClustersCreator
           cluster: {
             ca: c.master_auth.cluster_ca_certificate,
             endpoint: "https://#{c.endpoint}",
-            service_account: 'sysadmin',
-            token: @client.account('sysadmin')
+            global_service_account_name: 'sysadmin',
+            global_service_account_token: @client.account('sysadmin'),
+            service_account_token: @client.account('sysadmin')
           },
           config: config,
           services: {
             grafana: {
-              hostname: config[:grafana_hostname]
+              url: 'http://' + config[:grafana_hostname]
             }
           }
         }

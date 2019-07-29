@@ -199,12 +199,14 @@ module HubClustersCreator
             ca: ca,
             endpoint: "https://#{endpoint}",
             service_account: 'sysadmin',
-            token: kube.account('sysadmin')
+            global_service_account_name: 'sysadmin',
+            global_service_account_token: kube.account('sysadmin'),
+            service_account_token: kube.account('sysadmin')
           },
           config: config,
           services: {
             grafana: {
-              hostname: config[:grafana_hostname]
+              url: 'http://' + config[:grafana_hostname]
             }
           }
         }
