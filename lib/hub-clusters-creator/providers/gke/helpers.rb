@@ -300,7 +300,7 @@ module HubClustersCreator
           raise ArgumentError, 'network does not exist' unless network?(name)
 
           list = []
-          network(name).peerings.each do |x|
+          (network(name).peerings || []).each do |x|
             options = {
               direction: 'incoming',
               peering_name: x.name,

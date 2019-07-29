@@ -227,12 +227,12 @@ module HubClustersCreator
             network_checks.push(config[:master_ipv4_cidr_block]) unless config[:master_ipv4_cidr_block].empty?
           end
 
-          subnetworks = subnets(config[:network])
           network_checks.each do |n|
-            subnetworks.each do |x|
+            list = subnets(config[:network]) || []
+            list.each do |x|
               raise ConfigurationError, "subnetwork: #{n} already exists" if x.ip_cidr_range.equal?(n)
 
-              x.secondary_ip_ranges.each do |j|
+              (x.secondary_ip_ranges || []).each do |j|
                 raise ConfigurationError, "subnetwork: #{n} already exists" if j.ip_cidr_range.equal?(n)
               end
             end
@@ -240,7 +240,7 @@ module HubClustersCreator
 
           if config[:enable_private_network]
             # @check for any conflicts in peering
-            peered_networks(config[:network]).each do |n|
+            (peered_networks(config[:network]) || []).each do |n|
               network_checks.each do |x|
                 puts "checking #{x}, #{n.dest_range}"
                 raise ConfigurationError, "conflicting peered network: #{n.dest_range}" if n.dest_range == x
