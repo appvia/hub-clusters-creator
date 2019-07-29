@@ -206,7 +206,7 @@ module HubClustersCreator
           config: config,
           services: {
             grafana: {
-              url: 'http://' + config[:grafana_hostname]
+              url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"
             }
           }
         }
