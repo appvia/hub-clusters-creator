@@ -81,7 +81,7 @@ module HubClustersCreator
         def cluster(name)
           return nil unless cluster?(name)
 
-          clusters.select { |x| x.name = name }.first
+          clusters.select { |x| x.name == name }.first
         end
 
         # cluster? check if a gke cluster exists
