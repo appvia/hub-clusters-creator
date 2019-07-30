@@ -31,6 +31,7 @@ properties:
       the resources with.
     default: ''
     pattern: ^.*$
+    secret: true
 
   region:
     $id: '#/config/region'
