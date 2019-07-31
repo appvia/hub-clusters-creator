@@ -16,5 +16,5 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 module HubClustersCreator
-  VERSION = '0.0.5'
+  VERSION = '0.0.6'
 end
