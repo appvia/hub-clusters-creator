@@ -57,6 +57,9 @@ module HubClustersCreator
           name: cluster-admin
         subjects:
         - kind: ServiceAccount
+          name: namespaces
+          namespace: default
+        - kind: ServiceAccount
           name: sysadmin
           namespace: kube-system
       YAML

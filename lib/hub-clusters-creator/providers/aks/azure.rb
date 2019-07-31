@@ -190,6 +190,7 @@ module HubClustersCreator
             global_service_account_name: 'sysadmin',
             global_service_account_token: kube.account('sysadmin'),
             service_account_name: 'namespaces',
+            service_account_namespace: 'default',
             service_account_token: kube.account('namespaces', 'default')
           },
           config: config,
