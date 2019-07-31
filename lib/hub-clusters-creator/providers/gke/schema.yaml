@@ -75,6 +75,7 @@ required:
 properties:
   name:
     $id: '#/properties/name'
+    tag: default
     type: string
     title: Cluster Name
     default: ''
@@ -87,6 +88,7 @@ properties:
 
   description:
     $id: '#/properties/description'
+    tag: default
     type: string
     title: Description
     description: >
@@ -98,6 +100,7 @@ properties:
 
   domain:
     $id: '#/properties/domain'
+    tag: default
     type: string
     title: DNS Domain
     default: ''
@@ -109,6 +112,7 @@ properties:
 
   version:
     $id: '#/properties/version'
+    tag: default
     type: string
     title: Initial Kubernetes Version
     default: '1.13.7-gke.8'
@@ -122,6 +126,7 @@ properties:
 
   size:
     $id: '#/properties/size'
+    tag: default
     type: integer
     title: Initial Node Size
     default: 1
@@ -133,6 +138,7 @@ properties:
 
   max_size:
     $id: '#/properties/max_size'
+    tag: default
     type: integer
     title: Max Size
     default: 10
@@ -144,6 +150,7 @@ properties:
 
   disk_size_gb:
     $id: '#/properties/disk_size_gb'
+    tag: default
     type: integer
     title: Compute Disk Size (GB)
     default: 100
@@ -154,6 +161,7 @@ properties:
 
   image_type:
     $id: '#/properties/image_type'
+    tag: advanced
     type: string
     title: Machine Image
     default: 'COS'
@@ -165,6 +173,7 @@ properties:
 
   machine_type:
     $id: '#/properties/machine_type'
+    tag: default
     type: string
     title: Machine Type
     default: n1-standard-1
@@ -176,6 +185,7 @@ properties:
 
   authorized_master_cidrs:
     $id: '#/properties/authorized_master_cidrs'
+    tag: default
     type: array
     title: Master Authorized Networks
     items:
@@ -205,6 +215,7 @@ properties:
 
   github_client_id:
     $id: '#/properties/github_client_id'
+    tag: default
     type: string
     title: Github Client ID
     default: ''
@@ -216,6 +227,7 @@ properties:
 
   github_client_secret:
     $id: '#/properties/github_client_secret'
+    tag: default
     type: string
     title: Github Client Secret
     default: ''
@@ -227,6 +239,7 @@ properties:
 
   grafana_disk_size:
     $id: '#/properties/grafana_disk_size'
+    tag: advanced
     type: integer
     title: Grafana Disk Size
     default: 10
@@ -238,6 +251,7 @@ properties:
 
   grafana_hostname:
     $id: '#/properties/grafana_hostname'
+    tag: default
     type: string
     title: Grafana Hostname
     default: 'grafana'
@@ -250,17 +264,20 @@ properties:
 
   grafana_password:
     $id: '#/properties/grafana_password'
+    tag: advanced
     type: string
     title: Grafana Admin Password
     default: ''
     description: >
-      The password for the deployed grafana instance (default username is: admin)
+      The password for the deployed grafana instance (default username
+      is: admin)
     examples:
       - some_random_password
     pattern: ^(.*)$
 
   grafana_version:
     $id: '#/properties/grafana_version'
+    tag: advanced
     type: string
     title: Grafana Version
     default: '6.2.5'
@@ -272,6 +289,7 @@ properties:
 
   network:
     $id: '#/properties/network'
+    tag: default
     type: string
     title: GCP Network
     default: 'default'
@@ -284,6 +302,7 @@ properties:
 
   subnetwork:
     $id: '#/properties/subnetwork'
+    tag: default
     type: string
     title: Subnetwork for Nodes
     default: 'default'
@@ -295,6 +314,7 @@ properties:
 
   create_subnetwork:
     $id: '#/properties/create_subnetwork'
+    tag: advanced
     type: boolean
     title: Create Subnetwork
     description: >
@@ -307,6 +327,7 @@ properties:
 
   services_ipv4_cidr:
     $id: '#/properties/services_ipv4_cidr'
+    tag: advanced
     type: string
     title: Cluster Services CIDR
     default: ''
@@ -319,6 +340,7 @@ properties:
 
   cluster_ipv4_cidr:
     $id: '#/properties/cluster_ipv4_cidr'
+    tag: advanced
     type: string
     title: Cluster Pod Network
     default: ''
@@ -332,6 +354,7 @@ properties:
 
   enable_autorepair:
     $id: '#/properties/enable_autorepair'
+    tag: default
     type: boolean
     title: Node Autorepair
     default: true
@@ -344,6 +367,7 @@ properties:
 
   enable_autoscaler:
     $id: '#/properties/enable_autoscaler'
+    tag: default
     type: boolean
     title: Cluster Autoscaling
     default: true
@@ -356,6 +380,7 @@ properties:
 
   enable_autoupgrade:
     $id: '#/properties/enable_autoupgrade'
+    tag: default
     type: boolean
     title: Cluster Autoupgrading
     default: true
@@ -369,6 +394,7 @@ properties:
 
   enable_binary_authorization:
     $id: '#/properties/enable_binary_authorization'
+    tag: advanced
     type: boolean
     title: Binary Authorization Service
     default: false
@@ -381,6 +407,7 @@ properties:
 
   enable_horizontal_pod_autoscaler:
     $id: '#/properties/enable_horizontal_pod_autoscaler'
+    tag: default
     type: boolean
     title: Horizontal Pod Autoscaler
     default: false
@@ -395,6 +422,7 @@ properties:
 
   enable_http_loadbalancer:
     $id: '#/properties/enable_http_loadbalancer'
+    tag: default
     type: boolean
     title: HTTP Ingress Controller
     default: true
@@ -408,6 +436,7 @@ properties:
 
   enable_istio:
     $id: '#/properties/enable_istio'
+    tag: default
     type: boolean
     title: Istio Service Mesh
     default: false
@@ -421,6 +450,7 @@ properties:
 
   enable_logging:
     $id: '#/properties/enable_logging'
+    tag: default
     type: boolean
     title: Stackdriver Logging
     default: false
@@ -432,6 +462,7 @@ properties:
 
   enable_monitoring:
     $id: '#/properties/enable_monitoring'
+    tag: default
     type: boolean
     title: Stackdriver Metrics
     default: false
@@ -443,6 +474,7 @@ properties:
 
   enable_private_endpoint:
     $id: '#/properties/enable_private_endpoint'
+    tag: advanced
     type: boolean
     title: Private Endpoints
     default: false
@@ -455,6 +487,7 @@ properties:
 
   enable_private_network:
     $id: '#/properties/enable_private_network'
+    tag: advanced
     type: boolean
     title: Private Node Networking
     default: true
@@ -467,6 +500,7 @@ properties:
 
   master_ipv4_cidr_block:
     $id: '#/properties/master_ipv4_cidr_block'
+    tag: default
     type: string
     title: Master Peer Network Block
     default: '172.16.0.0/28'
@@ -480,6 +514,7 @@ properties:
 
   maintenance_window:
     $id: '#/properties/maintenance_window'
+    tag: default
     type: string
     title: Maintenance Window
     default: '03:00'
@@ -492,6 +527,7 @@ properties:
 
   preemptible:
     $id: '#/properties/preemptible'
+    tag: advanced
     type: boolean
     title: Preemptible Nodes
     default: false
