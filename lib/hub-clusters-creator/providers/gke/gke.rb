@@ -26,6 +26,8 @@ require 'hub-clusters-creator/logging'
 require 'hub-clusters-creator/providers/bootstrap'
 require 'hub-clusters-creator/providers/gke/helpers'
 
+require 'base64'
+
 # rubocop:disable Metrics/ClassLength,Metrics/LineLength,Metrics/MethodLength
 module HubClustersCreator
   module Providers
@@ -118,11 +120,11 @@ module HubClustersCreator
           cluster: {
             ca: c.master_auth.cluster_ca_certificate,
             endpoint: "https://#{c.endpoint}",
-            global_service_account_name: 'sysadmin',
-            global_service_account_token: @client.account('sysadmin'),
-            service_account_name: 'namespaces',
-            service_account_namespace: 'default',
-            service_account_token: @client.account('namespaces', 'default')
+            global_service_account_name: 'default',
+            global_service_account_token: Base64.decode64(@client.account('robot', 'default')),
+            service_account_name: 'sysadmin',
+            service_account_namespace: 'sysadmin',
+            service_account_token: Base64.decode64(@client.account('sysadmin'))
           },
           config: config,
           services: {

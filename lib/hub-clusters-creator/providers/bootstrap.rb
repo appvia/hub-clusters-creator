@@ -42,7 +42,7 @@ module HubClustersCreator
         apiVersion: v1
         kind: ServiceAccount
         metadata:
-          name: namespaces
+          name: robot
           namespace: default
       YAML
 
@@ -57,7 +57,7 @@ module HubClustersCreator
           name: cluster-admin
         subjects:
         - kind: ServiceAccount
-          name: namespaces
+          name: robot
           namespace: default
         - kind: ServiceAccount
           name: sysadmin

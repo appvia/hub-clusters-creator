@@ -23,6 +23,7 @@ require 'azure_mgmt_resources'
 require 'azure_mgmt_container_service'
 require 'azure_mgmt_dns'
 require 'uri'
+require 'base64'
 
 # rubocop:disable Metrics/ClassLength,Metrics/LineLength,Metrics/MethodLength
 module HubClustersCreator
@@ -187,11 +188,11 @@ module HubClustersCreator
             ca: ca,
             endpoint: "https://#{endpoint}",
             service_account: 'sysadmin',
-            global_service_account_name: 'sysadmin',
-            global_service_account_token: kube.account('sysadmin'),
-            service_account_name: 'namespaces',
-            service_account_namespace: 'default',
-            service_account_token: kube.account('namespaces', 'default')
+            global_service_account_name: 'robot',
+            global_service_account_token: Base64.decode64(kube.account('robot', 'default')),
+            service_account_name: 'sysadmin',
+            service_account_namespace: 'sysadmin',
+            service_account_token: Base64.decode64(kube.account('sysadmin'))
           },
           config: config,
           services: {
