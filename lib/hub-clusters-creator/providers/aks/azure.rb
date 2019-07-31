@@ -180,19 +180,7 @@ module HubClustersCreator
 
         # @step: provision the bootstrap
         info "attempting to bootstrap the cluster: #{name}"
-        HubClustersCreator::Providers::Bootstrap.new(name, kube, config).bootstrap
-
-        # @step: update the dns record for the ingress
-        unless (config[:grafana_hostname] || '').empty?
-          # Get the ingress resource and extract the load balancer ip address
-          # ingress = @client.get('loki-grafana', 'loki', 'ingresses', version: 'extensions/v1beta1')
-
-          #          unless ingress.status.loadBalancer.ingress.empty?
-          #            address = ingress.status.loadBalancer.ingress.first.ip
-          #            info "adding a dns record for #{config[:grafana_hostname]} => #{address}"
-          #            dns(hostname(config[:grafana_hostname]), address, config[:domain])
-          #          end
-        end
+        result = HubClustersCreator::Providers::Bootstrap.new(name, 'aks', kube, config).bootstrap
 
         {
           cluster: {
@@ -201,11 +189,13 @@ module HubClustersCreator
             service_account: 'sysadmin',
             global_service_account_name: 'sysadmin',
             global_service_account_token: kube.account('sysadmin'),
-            service_account_token: kube.account('sysadmin')
+            service_account_name: 'namespaces',
+            service_account_token: kube.account('namespaces', 'default')
           },
           config: config,
           services: {
             grafana: {
+              api_key: result[:grafana][:key],
               url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"
             }
           }

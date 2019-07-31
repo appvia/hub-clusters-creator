@@ -90,6 +90,7 @@ module HubClustersCreator
       end
 
       # create is responsible for building the infrastructure
+      # rubocop:disable Metrics/AbcSize
       def create(name, config)
         # @step: validate the configuration
         begin
@@ -107,7 +108,8 @@ module HubClustersCreator
 
         # @step: initialize the cluster
         begin
-          c = provision_cluster(name, config)
+          result = provision_cluster(name, config)
+          c = cluster(name)
         rescue StandardError => e
           raise InitializerError, "failed to initialize the cluster: '#{name}', error: #{e}"
         end
@@ -118,16 +120,19 @@ module HubClustersCreator
             endpoint: "https://#{c.endpoint}",
             global_service_account_name: 'sysadmin',
             global_service_account_token: @client.account('sysadmin'),
-            service_account_token: @client.account('sysadmin')
+            service_account_name: 'namespaces',
+            service_account_token: @client.account('namespaces', 'default')
           },
           config: config,
           services: {
             grafana: {
+              api_key: result[:grafana][:key],
               url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"
             }
           }
         }
       end
+      # rubocop:enable Metrics/AbcSize
 
       # destroy is used to kill off a cluster
       def destroy(name)
@@ -186,18 +191,16 @@ module HubClustersCreator
         @client.kubectl(DEFAULT_PSP_CLUSTERROLE_BINDING)
 
         # @step: bootstrap the cluster and wait
-        HubClustersCreator::Providers::Bootstrap.new(name, @client, config).bootstrap
+        result = HubClustersCreator::Providers::Bootstrap.new(name, 'gke', @client, config).bootstrap
 
-        ingress = @client.get('loki-grafana', 'loki', 'ingresses', version: 'extensions/v1beta1')
+        ingress = @client.ingress('loki-grafana', 'metrics')
         address = ingress.status.loadBalancer.ingress.first.ip
 
         # @step: update the dns record for the ingress
-        unless (config[:grafana_hostname] || '').empty?
-          info "adding a dns record for #{config[:grafana_hostname]} => #{address}"
-          dns(config[:grafana_hostname].split('.').first, address, config[:domain])
-        end
+        info "adding a dns record for #{config[:grafana_hostname]} => #{address}"
+        dns(config[:grafana_hostname].split('.').first, address, config[:domain])
 
-        cluster(name)
+        result
       end
       # rubocop:enable Metrics/AbcSize
 

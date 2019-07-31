@@ -53,7 +53,7 @@ module HubClustersCreator
     end
 
     # exists? checks if the resource exists
-    def exists?(name, kind, namespace = 'default', version = 'v1')
+    def exists?(name, namespace, kind, version = 'v1')
       begin
         kind = "#{kind}s" unless kind.end_with?('s')
         @client.api(version).resource(kind, namespace: namespace).get(name)
@@ -64,12 +64,17 @@ module HubClustersCreator
     end
 
     # get retrieves a resource from the cluster
-    def get(name, namespace, kind, version: 'v1')
+    def get(name, namespace, kind, version = 'v1')
       @client.api(version).resource(kind, namespace: namespace).get(name)
     end
 
+    # ingress is a just a shortcut get
+    def ingress(name, namespace)
+      get(name, namespace, 'ingresses', 'extensions/v1beta1')
+    end
+
     # delete removes a resource from the cluster
-    def delete(name, kind, namespace, version: 'v1')
+    def delete(name, namespace, kind, version: 'v1')
       return unless exists?(name, kind, namespace, version)
 
       @client.api(version).resource(kind, namespace: namespace).delete_resource(name)
@@ -113,11 +118,12 @@ module HubClustersCreator
 
       name = resource.metadata.name
       namespace = resource.metadata.namespace
-      kind = resource.kind.downcase
+      kind = "#{resource.kind.downcase}s"
       version = resource.apiVersion
-      return if exists?(name, kind, namespace, version)
 
-      @client.api(version).resource("#{kind}s", namespace: namespace).create_resource(resource)
+      return if exists?(name, namespace, kind, version)
+
+      @client.api(version).resource(kind, namespace: namespace).create_resource(resource)
     end
     # rubocop:enable Metrics/AbcSize
 

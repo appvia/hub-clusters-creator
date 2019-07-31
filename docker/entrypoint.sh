@@ -27,6 +27,41 @@ HELM_REPOS="${HELM_DIR}/repositories"
 HELM_BUNDLES="${HELM_DIR}/charts"
 KUBE_DIR="${CONFIG_DIR}/manifests"
 
+provision-grafana() {
+  # @step: we need to check if the api already get exists
+  kubectl -n kube-system get secret grafana_api && return 0
+
+  local HOSTNAME="${GRAFANA_HOSTNAME}.${GRAFANA_NAMESPACE}.svc.cluster.local"
+  local URL="${GRAFANA_SCHEMA}://admin:${GRAFANA_PASSWORD}@${HOSTNAME}"
+  local API_KEY_FILE="/tmp/key.json"
+
+  # @step: provison the api for grafana
+  info "provisioning the grafana api key, hostname: ${HOSTNAME}"
+  cat <<-EOF > /tmp/params.json
+  { "name": "api", "role": "Admin", "secondsToLive": 0 }
+EOF
+  for ((i=0; i<30; i++)) do
+    info "attempting to provision a api key for grafana"
+    if curl -s -X POST -H "Content-Type: application/json" \
+      --data @/tmp/params.json \
+      ${URL}/api/auth/keys > ${API_KEY_FILE}; then
+      info "successfully provisioned a api key"
+      break
+    fi
+    error "failed to provision the grafana api key, we will retry"
+    sleep 10
+  done
+
+  # @check if we we able to provision an api key
+  [[ -e ${API_KEY_FILE}        ]] || return 1
+  [[ -n $(cat ${API_KEY_FILE}) ]] || return 1
+  # @check we have valid json
+  jq >/dev/null < ${API_KEY_FILE} || return 1
+  export GRAFANA_API_KEY=$(jq -r '.key' < ${API_KEY_FILE})
+
+  return 0
+}
+
 # deploy-manifests deploys all the files in the manifests directory
 deploy-manifests() {
   info "deploying the kubernetes manifests from: ${KUBE_DIR}"
@@ -67,18 +102,39 @@ deploy-bundles() {
     while IFS=',' read chart namespace options; do
       namespace=${namespace:-"default"}
       name=${chart%%/*}
-      info "installing chart: ${chart}, namespace: ${namespace}, options: ${options}"
-      helm upgrade --install --wait ${chart} --namespace ${namespace} ${options} || return 1
+      if helm ls | grep -v ^name; then
+        info "upgrading chart: ${chart}, namespace: ${namespace}, options: ${options}"
+        helm upgrade --install --wait ${name} ${chart} --namespace ${namespace} ${options} || return 1
+      else
+        info "upgrading chart: ${chart}, namespace: ${namespace}, options: ${options}"
+        helm install --wait ${chart} --namespace ${namespace} --name ${name} ${options} || return 1
+      fi
     done < <(cat ${HELM_BUNDLES})
   fi
 }
 
-deploy-manifests || {
+if ! deploy-manifests; then
   error "failed to deploy the kubernetes manifests";
-  exit 1;
-}
-deploy-bundles || {
-  error "failed to deploy the software manifests";
-  exit 1;
-}
+  exit 1
+fi
 
+if ! deploy-bundles; then
+  error "failed to deploy the software manifests";
+  exit 1
+fi
+
+if ! provision-grafana; then
+  error "failed provision grafana instance"
+  exit 1
+else
+  for ((i=0; i<3; i++)) do
+    if kubectl -n ${GRAFANA_API_SECRET_NAMESPACE} create \
+      secret generic ${GRAFANA_API_SECRET} \
+      --from-literal=key=${GRAFANA_API_KEY}; then
+      info "adding the grafana api key secret"
+      break
+    fi
+    error "failed to provision the secret, we will retry with a backoff"
+    sleep 5
+  done
+fi
