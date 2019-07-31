@@ -83,7 +83,6 @@ required:
 properties:
   name:
     $id: '#/properties/name'
-    tag: default
     type: string
     title: Cluster Name
     default: ''
@@ -96,7 +95,6 @@ properties:
 
   domain:
     $id: '#/properties/domain'
-    tag: default
     type: string
     title: DNS Domain
     default: ''
@@ -108,7 +106,6 @@ properties:
 
   version:
     $id: '#/properties/version'
-    tag: default
     type: string
     title: Initial Kubernetes Version
     default: '1.14.3'
@@ -121,7 +118,6 @@ properties:
 
   size:
     $id: '#/properties/size'
-    tag: default
     type: integer
     title: Initial Node Size
     default: 1
@@ -133,7 +129,6 @@ properties:
 
   max_size:
     $id: '#/properties/max_size'
-    tag: default
     type: integer
     title: Max Size
     default: 10
@@ -145,7 +140,6 @@ properties:
 
   machine_type:
     $id: '#/properties/machine_type'
-    tag: default
     type: string
     title: Machine Type
     description: >
@@ -156,7 +150,6 @@ properties:
 
   disk_size_gb:
     $id: '#/properties/disk_size_gb'
-    tag: default
     type: integer
     title: Compute Disk Size (GB)
     default: 100
@@ -167,7 +160,6 @@ properties:
 
   ssh_key:
     $id: '#/properties/ssh_key'
-    tag: default
     type: string
     title: SSH Public Key
     default: ''
@@ -179,7 +171,6 @@ properties:
 
   services_ipv4_cidr:
     $id: '#/properties/services_ipv4_cidr'
-    tag: advanced
     type: string
     title: Cluster Services CIDR
     default: ''
@@ -192,7 +183,6 @@ properties:
 
   github_client_id:
     $id: '#/properties/github_client_id'
-    tag: default
     type: string
     title: Github Client ID
     default: ''
@@ -204,7 +194,6 @@ properties:
 
   github_client_secret:
     $id: '#/properties/github_client_secret'
-    tag: default
     type: string
     title: Github Client Secret
     default: ''
@@ -216,7 +205,6 @@ properties:
 
   grafana_disk_size:
     $id: '#/properties/grafana_disk_size'
-    tag: advanced
     type: integer
     title: Grafana Disk Size
     default: 10
@@ -228,7 +216,6 @@ properties:
 
   grafana_hostname:
     $id: '#/properties/grafana_hostname'
-    tag: default
     type: string
     title: Grafana Hostname
     default: 'grafana'
@@ -239,9 +226,33 @@ properties:
       - metrics
     pattern: ^(.*)$
 
+  grafana_password:
+    $id: '#/properties/grafana_password'
+    type: string
+    title: Grafana Admin Password
+    default: ''
+    description: >
+      The password for the deployed grafana instance (default username is: admin)
+    examples:
+      - some_random_password
+    pattern: ^(.*)$
+
+  grafana_disk_size:
+    $id: '#/properties/grafana_disk_size'
+    type: integer
+    title: Grafana Disk Size
+    default: 10
+    description: >
+      The size of the disk used for grafana instance
+    examples:
+      - 10
+      - 100
+    examples:
+      - 10
+      - 100
+
   grafana_version:
     $id: '#/properties/grafana_version'
-    tag: advanced
     type: string
     title: Grafana Version
     default: '6.2.5'

@@ -18,6 +18,8 @@
 require 'hub-clusters-creator/template'
 require 'hub-clusters-creator/logging'
 
+require 'base64'
+
 # rubocop:disable Metrics/MethodLength,Metrics/LineLength
 module HubClustersCreator
   # Providers is the namespace of the cloud providers
@@ -28,12 +30,20 @@ module HubClustersCreator
       include Logging
       include HubClustersCreator::Utils::Template
 
-      DEFAULT_CLUSTER_ADMIN_ROLE = <<~YAML
+      DEFAULT_CLUSTER_ADMIN_SA = <<~YAML
         apiVersion: v1
         kind: ServiceAccount
         metadata:
           name: sysadmin
           namespace: kube-system
+      YAML
+
+      DEFAULT_NAMESPACE_AGENT_SA = <<~YAML
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: namespaces
+          namespace: default
       YAML
 
       DEFAULT_CLUSTER_ADMIN_BINDING = <<~YAML
@@ -47,12 +57,15 @@ module HubClustersCreator
           name: cluster-admin
         subjects:
         - kind: ServiceAccount
+          name: namespaces
+          namespace: default
+        - kind: ServiceAccount
           name: sysadmin
           namespace: kube-system
       YAML
 
       # is the name of the container image
-      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:latest'
+      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:test'
       # is the name of the job
       BOOTSTRAP_NAME = 'bootstrap'
       # is the name of the namespace the job lives in
@@ -60,10 +73,11 @@ module HubClustersCreator
 
       attr_accessor :client, :config, :name
 
-      def initialize(name, client, config)
+      def initialize(name, provider, client, config)
         @name = name
         @client = client
         @config = config
+        @provider = provider
       end
 
       # provision_bootstrap is responsible for setting up the agents and strapper
@@ -75,27 +89,47 @@ module HubClustersCreator
         client.wait_for_kubeapi
 
         info 'applying the default cluster admin service account and role'
-        client.kubectl(DEFAULT_CLUSTER_ADMIN_ROLE)
+        client.kubectl(DEFAULT_CLUSTER_ADMIN_SA)
+        client.kubectl(DEFAULT_NAMESPACE_AGENT_SA)
         client.kubectl(DEFAULT_CLUSTER_ADMIN_BINDING)
+
+        # @step: check if there is a password for grafana and if not create on
+        if config[:grafana_password].empty?
+          chars = [('a'..'z'), ('A'..'Z')].map(&:to_a).flatten
+          config[:grafana_password] = (0...12).map { chars[rand(chars.length)] }.join
+        end
 
         info 'attempting to bootstrap the cluster configuration'
         client.kubectl(generate_bootstrap_config)
         client.kubectl(generate_bootstrap_job(image))
 
         info 'waiting for the bootstrap to complete successfully'
-        name = BOOTSTRAP_NAME
-        namespace = BOOTSTRAP_NAMESPACE
-
-        client.wait(name, namespace, 'jobs', version: 'batch/v1', interval: 10, timeout: 500) do |x|
+        client.wait(BOOTSTRAP_NAME, BOOTSTRAP_NAMESPACE, 'jobs', version: 'batch/v1') do |x|
           x.status.nil? || x.status['succeeded'] <= 0 ? false : true
         end
+
+        # @step: extract the grafana api
+        grafana_key_name = 'grafana-api-key'
+        unless client.exists?(grafana_key_name, 'kube-system', 'secrets')
+          raise StandardError, 'grafana api secret is missing'
+        end
+
+        grafana_api_key = Base64.decode64(client.get(grafana_key_name, 'kube-system', 'secrets').data.key)
+
         info 'bootstrap has successfully completed'
 
         # @step: wait for the ingress to appaar and provision and grab the address
         info 'waiting for grafana ingress load balancer to be provisioned'
-        @client.wait('loki-grafana', 'loki', 'ingresses', version: 'extensions/v1beta1') do |x|
+        client.wait('loki-grafana', 'metrics', 'ingresses', version: 'extensions/v1beta1') do |x|
           x.status.loadBalancer.ingress.empty? ? false : true
         end
+
+        {
+          grafana: {
+            key: grafana_api_key,
+            password: @config[:grafana_password]
+          }
+        }
       end
       # rubocop:enable Metrics/AbcSize
 
@@ -111,8 +145,7 @@ module HubClustersCreator
             namespace: #{BOOTSTRAP_NAMESPACE}
           data:
             charts: |
-              loki/loki-stack,loki,--name loki --values /config/bundles/grafana.yaml
-              stable/prometheus,kube-system,--name prometheus
+              loki/loki-stack,metrics,--values /config/bundles/grafana.yaml
             repositories: |
               loki,https://grafana.github.io/loki/charts
             grafana.yaml: |
@@ -123,7 +156,7 @@ module HubClustersCreator
               promtail:
                 enabled: true
               prometheus:
-                enabled: false
+                enabled: true
                 server:
                   fullnameOverride: prometheus-server
                 nodeExporter:
@@ -133,6 +166,7 @@ module HubClustersCreator
                   enabled: true
               grafana:
                 enabled: true
+                adminPassword: <%= context[:grafana_password] %>
                 image:
                   repository: grafana/grafana
                   tag: <%= context[:grafana_version] || 'latest' %>
@@ -210,6 +244,20 @@ module HubClustersCreator
                   env:
                   - name: CONFIG_DIR
                     value: /config
+                  - name: PROVIDER
+                    value: #{@provider}
+                  - name: GRAFANA_NAMESPACE
+                    value: metrics
+                  - name: GRAFANA_HOSTNAME
+                    value: loki-grafana
+                  - name: GRAFANA_PASSWORD
+                    value: #{@config[:grafana_password]}
+                  - name: GRAFANA_API_SECRET
+                    value: grafana-api-key
+                  - name: GRAFANA_API_SECRET_NAMESPACE
+                    value: kube-system
+                  - name: GRAFANA_SCHEMA
+                    value: http
                   volumeMounts:
                   - name: bundle
                     mountPath: /config/bundles
