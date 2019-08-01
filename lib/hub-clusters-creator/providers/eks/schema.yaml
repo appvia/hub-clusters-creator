@@ -1,0 +1,382 @@
+---
+type: object
+title: EKS Provider Configuration
+description: >
+  Defined the provider configuration options required to initialize the
+  provider integration
+required:
+  - account_id
+  - access_id
+  - access_key
+  - region
+additionalProperties: false
+
+properties:
+  account_id:
+    $id: '#/config/account_id'
+    type: string
+    title: AWS Account ID
+    description: >
+      The AWS account id you are building the cluster within.
+    default: ''
+    examples:
+      - 1111111111
+    pattern: ^.*$
+
+  region:
+    $id: '#/config/region'
+    type: string
+    title: AWS Region
+    description: >
+      The aws region you wish to the cluster to reside within.
+    default: 'eu-west-2'
+    examples:
+      - eu-west-2
+    pattern: ^.*$
+
+  access_id:
+    $id: '#/config/access_id'
+    type: string
+    title: AWS Access ID
+    description: >
+      An AWS access id associated with the required IAM policy (please
+      check the documentation for details)
+    default: ''
+    pattern: ^.*$
+
+  access_key:
+    $id: '#/config/access_key'
+    type: string
+    title: AWS Access Key
+    description: >
+      An AWS secret id associated with the required IAM policy (please
+      check the documentation for details)
+    default: ''
+    pattern: ^.*$
+    secret: true
+---
+type: object
+title: EKS Cluster configuration
+description: >
+  Provides the ability to create a fully managed EKS cluster within AWS.
+required:
+  - availability_zones
+  - disk_size_gb
+  - domain
+  - enable_autoscaler
+  - machine_type
+  - name
+  - network
+  - private_subnet1
+  - private_subnet2
+  - private_subnet3
+  - public_subnet1
+  - public_subnet2
+  - public_subnet3
+  - size
+  - ssh_keypair
+  - version
+
+properties:
+  name:
+    $id: '#/properties/name'
+    tag: default
+    type: string
+    title: Cluster Name
+    default: ''
+    description: >
+      The name of the cluster you are provision within the cloud provider
+    examples:
+      - dev
+      - prod
+    pattern: ^.*$
+
+  domain:
+    $id: '#/properties/domain'
+    tag: default
+    type: string
+    title: DNS Domain
+    default: ''
+    description: >
+      The dns domain which the cluster is using; this mist be accessible from
+      with inside the project.
+    examples:
+      - 'example.com'
+
+  version:
+    $id: '#/properties/version'
+    tag: default
+    type: string
+    title: Initial Kubernetes Version
+    default: '1.13'
+    description: >
+      The initial kubernetes version which the cluster should be
+      configured with.
+    examples:
+      - 1.13
+      - 1.12
+    pattern: ^(.*)$
+
+  size:
+    $id: '#/properties/size'
+    tag: default
+    type: integer
+    title: Initial Node Size
+    default: 1
+    description: >
+      The number of nodes per zone which should exist in the cluster.
+    examples:
+      - 1
+      - 10
+
+  max_size:
+    $id: '#/properties/max_size'
+    tag: default
+    type: integer
+    title: Max Size
+    default: 10
+    description: >
+      Assuming the autoscaler is enabled this is the maximum number
+      nodes permitted.
+    examples:
+      - 10
+
+  disk_size_gb:
+    $id: '#/properties/disk_size_gb'
+    tag: default
+    type: integer
+    title: Compute Disk Size (GB)
+    default: 64
+    description: >
+      Is the size of the disk used by the compute nodes
+    examples:
+      - 64
+
+  machine_type:
+    $id: '#/properties/machine_type'
+    tag: default
+    type: string
+    title: Machine Type
+    default: t3.medium
+    description: >
+      The AWS machine type which the default nodes pool should use.
+    examples:
+      - t3.medium
+      - m4.large
+    pattern: ^(.*)$
+
+  ssh_keypair:
+    $id: '#/properties/ssh_keypair'
+    tag: default
+    type: string
+    title: Max Size
+    default: ''
+    description: >
+      The SSH keypair which the nodegroup should be provisioned to use.
+    examples:
+      - default
+    pattern: ^(.*)$
+
+  network:
+    $id: '#/properties/network'
+    tag: default
+    type: string
+    title: VPC Network
+    default: '10.0.0.0/16'
+    description: >
+      The VPC network cidr which the cluster should reside on.
+    examples:
+      - '10.0.0.0/16'
+    pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
+
+  availability_zones:
+    $id: '#/properties/availability_zones'
+    tag: default
+    type: string
+    title: Availability Zones
+    default: eu-west-2a,eu-west-2b,eu-west-2c
+    description: >
+      The availability zones which the subnets should be distributed to.
+    examples:
+      - 'eu-west-2a,eu-west-2b,eu-west-2c'
+    pattern: ^(.*)$
+
+  private_subnet1_cidr:
+    $id: '#/properties/private_subnet1_cidr'
+    tag: default
+    type: string
+    title: Private Subnet AZ1 CIDR
+    default: '10.0.0.0/19'
+    description: >
+      The network for the first availability zone (note we required a minimum
+      of two availability zones)
+    examples:
+      - '10.0.0.0/19'
+    pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
+
+  private_subnet2_cidr:
+    $id: '#/properties/private_subnet2_cidr'
+    tag: default
+    type: string
+    title: Private Subnet AZ2 CIDR
+    default: '10.0.32.0/19'
+    description: >
+      The network for the first availability zone (note we required a minimum
+      of two availability zones)
+    examples:
+      - '10.0.32.0/19'
+    pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
+
+  private_subnet3_cidr:
+    $id: '#/properties/private_subnet3_cidr'
+    tag: default
+    type: string
+    title: Private Subnet AZ3 CIDR
+    default: '10.0.64.0/19'
+    description: >
+      An optional third availability zone, you can remove the default if your
+      happy with two.
+    examples:
+      - '10.0.64.0/19'
+    pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
+
+  public_subnet1_cidr:
+    $id: '#/properties/public_subnet1_cidr'
+    tag: default
+    type: string
+    title: Public Subnet AZ1 CIDR
+    default: '10.0.0.0/19'
+    description: >
+      The network for the first availability zone (note we required a minimum
+      of two availability zones). This is where the NAT gateways and any
+      publically facing ELBs will live.
+    examples:
+      - '10.0.0.0/19'
+    pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
+
+  public_subnet2_cidr:
+    $id: '#/properties/public_subnet2_cidr'
+    tag: default
+    type: string
+    title: Public Subnet AZ2 CIDR
+    default: '10.0.32.0/19'
+    description: >
+      The network for the first availability zone (note we required a minimum
+      of two availability zones)
+    examples:
+      - '10.0.32.0/19'
+    pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
+
+  public_subnet3_cidr:
+    $id: '#/properties/public_subnet3_cidr'
+    tag: default
+    type: string
+    title: Public Subnet AZ3 CIDR
+    default: '10.0.64.0/19'
+    description: >
+      An optional third availability zone, you can remove the default if your
+      happy with two.
+    examples:
+      - '10.0.64.0/19'
+    pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
+
+  github_client_id:
+    $id: '#/properties/github_client_id'
+    tag: default
+    type: string
+    title: Github Client ID
+    default: ''
+    description: >
+      The Github client id for the oauth2 application
+    examples:
+      - ''
+    pattern: ^(.*)$
+
+  github_client_secret:
+    $id: '#/properties/github_client_secret'
+    tag: default
+    type: string
+    title: Github Client Secret
+    default: ''
+    description: >
+      The Github client secret taken from the oauth2 application
+    examples:
+      - ''
+    pattern: ^(.*)$
+
+  grafana_disk_size:
+    $id: '#/properties/grafana_disk_size'
+    tag: advanced
+    type: integer
+    title: Grafana Disk Size
+    default: 10
+    description: >
+      The size of the disk used for grafana instance
+    examples:
+      - 10
+      - 100
+
+  grafana_hostname:
+    $id: '#/properties/grafana_hostname'
+    tag: default
+    type: string
+    title: Grafana Hostname
+    default: 'grafana'
+    description: >
+      The dns hostname which grafana should be configured to respond to.
+    examples:
+      - grafana
+      - metrics
+    pattern: ^(.*)$
+
+  grafana_password:
+    $id: '#/properties/grafana_password'
+    tag: advanced
+    type: string
+    title: Grafana Admin Password
+    default: ''
+    description: >
+      The password for the deployed grafana instance (default username
+      is: admin)
+    examples:
+      - some_random_password
+    pattern: ^(.*)$
+
+  grafana_version:
+    $id: '#/properties/grafana_version'
+    tag: advanced
+    type: string
+    title: Grafana Version
+    default: '6.2.5'
+    description: >
+      The version of the grafana which should be installed.
+    examples:
+      - 6.2.5
+    pattern: ^(.*)$
+
+
+  enable_autoscaler:
+    $id: '#/properties/enable_autoscaler'
+    tag: default
+    type: boolean
+    title: Cluster Autoscaling
+    default: true
+    description: >
+      Indicates if the cluster should be configured with cluster autoscaling
+      turned on
+    examples:
+      - false
+      - true
+
+  enable_private_network:
+    $id: '#/properties/enable_private_network'
+    tag: advanced
+    type: boolean
+    title: Private Node Networking
+    default: true
+    description: >
+      Indicates if compute nodes should have external ip addresses or use
+      private networking and a managed NAT device.
+    examples:
+      - false
+      - true

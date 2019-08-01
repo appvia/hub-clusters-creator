@@ -39,12 +39,6 @@ module HubClustersCreator
 
       # @step: create and return a provider instance
       case @provider_name
-      when 'gke'
-        @provider = HubClustersCreator::Providers::GKE.new(
-          account: provider[:account],
-          project: provider[:project],
-          region: provider[:region]
-        )
       when 'aks'
         @provider = HubClustersCreator::Providers::AKS.new(
           client_id: provider[:client_id],
@@ -52,6 +46,18 @@ module HubClustersCreator
           region: provider[:region],
           subscription: provider[:subscription],
           tenant: provider[:tenant]
+        )
+      when 'eks'
+        @provider = HubClustersCreator::Providers::EKS.new(
+          access_id: provider[:access_id],
+          access_key: provider[:access_key],
+          region: provider[:region]
+        )
+      when 'gke'
+        @provider = HubClustersCreator::Providers::GKE.new(
+          account: provider[:account],
+          project: provider[:project],
+          region: provider[:region]
         )
       else
         raise ArgumentError, "cloud provider: #{@provider_name} not supported"
