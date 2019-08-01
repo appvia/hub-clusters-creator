@@ -186,7 +186,7 @@ module HubClustersCreator
                 networkPolicy:
                   enabled: true
                 persistence:
-                  enabled: false
+                  enabled: true
                   accessModes:
                     - ReadWriteOnce
                   size: <%= context[:grafana_disk_size] %><%= context[:grafana_disk_size].to_s.end_with?('Gi') ? '' : 'Gi' %>
