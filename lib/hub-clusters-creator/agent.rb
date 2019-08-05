@@ -21,6 +21,7 @@ require 'json_schema'
 require 'hub-clusters-creator/errors'
 require 'hub-clusters-creator/logging'
 require 'hub-clusters-creator/providers/aks/azure.rb'
+require 'hub-clusters-creator/providers/eks/eks.rb'
 require 'hub-clusters-creator/providers/gke/gke.rb'
 
 # rubocop:disable Metrics/MethodLength,Metrics/LineLength
@@ -49,6 +50,7 @@ module HubClustersCreator
         )
       when 'eks'
         @provider = HubClustersCreator::Providers::EKS.new(
+          account_id: provider[:account_id],
           access_id: provider[:access_id],
           access_key: provider[:access_key],
           region: provider[:region]

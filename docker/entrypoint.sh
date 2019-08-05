@@ -29,7 +29,7 @@ KUBE_DIR="${CONFIG_DIR}/manifests"
 
 provision-grafana() {
   # @step: we need to check if the api already get exists
-  kubectl -n kube-system get secret grafana_api && return 0
+  kubectl -n ${GRAFANA_API_SECRET_NAMESPACE} get secret ${GRAFANA_API_SECRET} && return 0
 
   local HOSTNAME="${GRAFANA_HOSTNAME}.${GRAFANA_NAMESPACE}.svc.cluster.local"
   local URL="${GRAFANA_SCHEMA}://admin:${GRAFANA_PASSWORD}@${HOSTNAME}"

@@ -195,9 +195,7 @@ module HubClustersCreator
 
         # @step: bootstrap the cluster and wait
         result = HubClustersCreator::Providers::Bootstrap.new(name, 'gke', @client, config).bootstrap
-
-        ingress = @client.ingress('loki-grafana', 'metrics')
-        address = ingress.status.loadBalancer.ingress.first.ip
+        address = result[:grafana][:hostname]
 
         # @step: update the dns record for the ingress
         info "adding a dns record for #{config[:grafana_hostname]} => #{address}"

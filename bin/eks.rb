@@ -24,8 +24,8 @@ require 'pp'
 creator = HubClustersCreator.new(
   provider: 'eks',
   access_id: ENV['EKS_ACCESS_ID'],
-  access_secret: ENV['EKS_ACCESS_SECRET'],
-  account_id: ENV['EKS_ACCOUNT'],
+  access_key: ENV['EKS_ACCESS_KEY'],
+  account_id: ENV['EKS_ACCOUNT_ID'],
   region: ENV['EKS_REGION']
 )
 puts creator.provision(
@@ -37,5 +37,7 @@ puts creator.provision(
   grafana_ingress: true,
   machine_type: 't3.medium',
   name: 'test',
+  size: 3,
+  ssh_keypair: 'default',
   version: '1.13'
 )

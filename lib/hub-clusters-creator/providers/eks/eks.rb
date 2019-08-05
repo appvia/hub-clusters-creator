@@ -17,6 +17,7 @@
 #
 
 require 'aws-sdk-cloudformation'
+require 'aws-sdk-route53'
 require 'aws-sigv4'
 require 'base64'
 require 'cgi'
@@ -30,17 +31,17 @@ module HubClustersCreator
       include Logging
 
       def initialize(options)
-        @account_id = optons[:account_id]
+        @account_id = options[:account_id]
         @access_id = options[:access_id]
         @access_key = options[:access_key]
         @region = options[:region]
-        @templates_bucket = options[:bucket] || 'hub-clusters-creator-eu-west-2.s3.eu-west-2.amazonaws.com'
-        @templates_version = options[:version] || 'v0.0.1'
+        @templates_bucket = options[:bucket] || 'hub-clusters-creator-eu-west-2'
+        @templates_version = options[:version] || 'eks/v0.0.1'
       end
 
-      # provision is the entrypoint for creating a cluster
+      # create is the entrypoint for creating a cluster
       # rubocop:disable Metrics/AbcSize
-      def provision(name, config)
+      def create(name, config)
         # @step: build the paramaters
         parameters = [
           { parameter_key: 'ClusterName', parameter_value: name },
@@ -52,14 +53,16 @@ module HubClustersCreator
           { parameter_key: 'KubernetesVersion', parameter_value: config[:version] },
           { parameter_key: 'NodeGroupName', parameter_value: 'compute' },
           { parameter_key: 'NodeInstanceType', parameter_value: config[:machine_type] },
-          { parameter_key: 'NodeVolumeSize', parameter_value: config[:disk_size_gb] },
-          { parameter_key: 'NumberOfNodes', parameter_value: config[:size] },
+          { parameter_key: 'NodeVolumeSize', parameter_value: config[:disk_size_gb].to_s },
+          { parameter_key: 'NumberOfAZs', parameter_value: config[:availability_zones].split(',').size.to_s },
+          { parameter_key: 'NumberOfNodes', parameter_value: config[:size].to_s },
           { parameter_key: 'PrivateSubnet1CIDR', parameter_value: config[:private_subnet1_cidr] },
           { parameter_key: 'PrivateSubnet2CIDR', parameter_value: config[:private_subnet2_cidr] },
           { parameter_key: 'PrivateSubnet3CIDR', parameter_value: config[:private_subnet3_cidr] },
           { parameter_key: 'PublicSubnet1CIDR', parameter_value: config[:public_subnet1_cidr] },
           { parameter_key: 'PublicSubnet2CIDR', parameter_value: config[:public_subnet2_cidr] },
           { parameter_key: 'PublicSubnet3CIDR', parameter_value: config[:public_subnet3_cidr] },
+          { parameter_key: 'RemoteAccessCIDR', parameter_value: '0.0.0.0/0' },
           { parameter_key: 'VPCCIDR', parameter_value: config[:network] }
         ]
 
@@ -75,13 +78,14 @@ module HubClustersCreator
         client.wait_for_kubeapi
 
         # @step: check if the awa-auth configmap exists already, we never overwrite
-        unless client.exists?('aws-auth', 'Kube-system', 'configmaps')
+        unless client.exists?('aws-auth', 'kube-system', 'configmaps')
           info 'provition the aws-auth configureation configmap'
           client.kubectl(default_aws_auth(name))
 
           # @step: ensure we have some nodes
           info 'waiting for some nodes to become available'
-          client.wait('aws-node', 'kube-system', 'extensions/v1beta1') do |x|
+          client.wait('aws-node', 'kube-system', 'daemonsets', version: 'extensions/v1beta1') do |x|
+            puts x.status.numberReady.positive?
             x.status.numberReady.positive?
           end
         end
@@ -89,6 +93,10 @@ module HubClustersCreator
         # @step: provision the cluster
         info 'bootstraping the eks cluster'
         result = HubClustersCreator::Providers::Bootstrap.new(name, 'eks', client, config).bootstrap
+        address = result[:grafana][:hostname]
+
+        info 'adding the dns entry for the grafana dashboard'
+        dns(config[:grafana_hostname], address, config[:domain])
 
         {
           cluster: {
@@ -113,7 +121,7 @@ module HubClustersCreator
 
       # destroy is responsible for deleting the cluster
       def destroy(stack)
-        next unless stack?(name)
+        return unless stack?(name)
 
         # delete the cloudformation stack
         info "deleting the cloudformation stack: #{stack}"
@@ -127,71 +135,68 @@ module HubClustersCreator
 
       # template_path returns the template url
       def template_path(name)
-        "https://#{@templates_bucket}/eks/#{@templates_version}/#{name}.yaml"
+        "https://#{@templates_bucket}.s3.amazonaws.com/#{@templates_version}/#{name}.yaml"
       end
 
       # cloudformation is responsible for applying the cloudformation template
-      # rubocop:disable Metrics/AbcSize
-      def cloudformation(name, template_body: nil, template_url: nil, parameters: nil, blocking: true)
+      def cloudformation(name, template_url: nil, parameters: nil, blocking: true)
         # check the cloudformation template already exists and either
         # update or create it
-        stack = {
-          stack_name: name,
-          capabilities: %w[CAPABILITY_IAM CAPABILITY_NAMED_IAM],
-          on_failure: 'DO_NOTHING',
-          parameters: parameters,
-          template_body: template_body,
-          template_url: template_url
-        }
+        wait_name = :stack_create_complete
         case stack?(name)
         when true
-          info "updating the cloudformation stack: #{name}"
-          client.update_stack(stack)
+          info "updating the cloudformation stack: '#{name}'"
+          client.update_stack(
+            stack_name: name,
+            capabilities: %w[CAPABILITY_IAM CAPABILITY_NAMED_IAM],
+            parameters: parameters,
+            template_url: template_url
+          )
+          wait_name = :stack_update_complete
         else
-          info "creating the cloudformation stack: #{name}"
-          client.create_stack(stack)
+          info "creating the cloudformation stack: '#{name}'"
+          client.create_stack(
+            stack_name: name,
+            capabilities: %w[CAPABILITY_IAM CAPABILITY_NAMED_IAM],
+            on_failure: 'DO_NOTHING',
+            parameters: parameters,
+            template_url: template_url,
+            timeout_in_minutes: 20
+          )
         end
-
-        outputs = {}
 
         # wait for the cloudformation operation to complete
         if blocking
-          client.wait_until :stack_create_complete, stack_name: name
-
-          # @step: describe the stacks and get the outputs
-          output = client.describe_stacks stack_name: name
-          raise StandardError, "failed to find stack: #{name}" if output.stacks.empty?
-
-          output.stacks.first.outputs.each do |x|
-            outputs[x.output_key] = x.output_value
+          begin
+            info "waiting for the stack: '#{name}' to reach state: '#{wait_name}'"
+            client.wait_until wait_name, stack_name: name
+          rescue Aws::Waiters::Errors::FailureStateError => e
+            error "failed to create or update stack: '#{name}', error: #{e}"
+            raise InfrastructureError, e
           end
         end
-
-        outputs
+        # @step: return the outputs from the stack
+        get_stack_outputs(name)
       end
-      # rubocop:enable Metrics/AbcSize
 
       # build_token is used to construct a token for the eks cluster
       def build_token(name)
+        # Note - sts only has ONE endpoint (not regional) so 'us-east-1'
+        # hardcoding should be OK
         signer = Aws::Sigv4::Signer.new(
           service: 'sts',
-          region: @region,
-          credentials: @credentials
+          region: 'us-east-1',
+          credentials_provider: @credentials
         )
-        # https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/Sigv4/Signer.html#presign_url-instance_method
         presigned_url_string = signer.presign_url(
-          http_method: 'GET',
           url: 'https://sts.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15',
           body: '',
-          credentials: @credentials,
           expires_in: 60,
-          headers: {
-            'X-K8s-Aws-Id': name
-          }
+          headers: { 'X-K8s-Aws-Id' => name },
+          http_method: 'GET'
         )
-        kube_token = 'k8s-aws-v1.' + Base64.urlsafe_encode64(presigned_url_string.to_s).chomp('==')
 
-        kube_token
+        'k8s-aws-v1.' + Base64.urlsafe_encode64(presigned_url_string.to_s).chomp('==')
       end
 
       # stack? checks if the cloudformation stack exists
@@ -201,13 +206,68 @@ module HubClustersCreator
 
       # list_stacks returns a list of cloudformation stacks
       def list_stacks
-        client.describe_stacks
+        client.describe_stacks.stacks
+      end
+
+      # get_stack_outputs retrieves the stack and extracts the output
+      def get_stack_outputs(name)
+        list = client.describe_stacks stack_name: name
+        raise StandardError, "stack: '#{name}' does not exist" if list.stacks.empty?
+
+        outputs = {}
+        list.stacks.first.outputs.each do |x|
+          outputs[x.output_key] = x.output_value
+        end
+
+        outputs
       end
 
       # client returns the cloudformation client
       def client
         @credentials ||= Aws::Credentials.new(@access_id, @access_key)
         @client ||= Aws::CloudFormation::Client.new(
+          credentials: @credentials,
+          region: @region
+        )
+      end
+
+      # dns is responsible for adding a dns record
+      def dns(source, dest, zone, record: 'CNAME', ttl: 60)
+        hosting_zone = get_hosting_zone(zone)
+        if hosting_zone.nil?
+          raise ArgumentError, "no hosting domain found for: '#{zone}'"
+        end
+
+        fqdn = "#{source}.#{zone}"
+
+        route53.change_resource_record_sets(
+          change_batch: {
+            changes: [
+              {
+                action: 'UPSERT',
+                resource_record_set: {
+                  name: fqdn,
+                  resource_records: [{ value: dest }],
+                  ttl: ttl,
+                  type: record
+                }
+              }
+            ]
+          },
+          hosted_zone_id: hosting_zone.id
+        )
+      end
+
+      # get_hosting_zone is responsible for getting the hosting zone
+      def get_hosting_zone(domain)
+        route53.list_hosted_zones.hosted_zones.select do |x|
+          x.name == "#{domain}."
+        end.first
+      end
+
+      # route53 returns a route53 client
+      def route53
+        @route53 ||= Aws::Route53::Client.new(
           credentials: @credentials,
           region: @region
         )
