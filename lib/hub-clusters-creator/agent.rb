@@ -69,7 +69,7 @@ module HubClustersCreator
 
     # providers provides a list of providers
     def self.providers
-      %w[aks gke]
+      %w[aks eks gke]
     end
 
     # defaults builds the default from the schema
