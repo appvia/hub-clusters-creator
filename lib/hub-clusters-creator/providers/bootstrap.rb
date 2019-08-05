@@ -65,11 +65,7 @@ module HubClustersCreator
       YAML
 
       # is the name of the container image
-      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:test'
-      # is the name of the job
-      BOOTSTRAP_NAME = 'bootstrap'
-      # is the name of the namespace the job lives in
-      BOOTSTRAP_NAMESPACE = 'kube-system'
+      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:v0.0.8'
 
       attr_accessor :client, :config, :name
 
@@ -78,13 +74,14 @@ module HubClustersCreator
         @client = client
         @config = config
         @provider = provider
+        @config[:provider] = @provider
       end
 
       # provision_bootstrap is responsible for setting up the agents and strapper
       # a) pushes in the configuration for the bootstrapper
       # b) rolls out the kubernetes job to bootstrap the cluster
       # c) grabs the services and provisions the dns
-      # rubocop:disable Metrics/AbcSize
+      # rubocop:disable Metrics/AbcSize, Style/ConditionalAssignment
       def bootstrap(image = BOOTSTRAP_IMAGE)
         client.wait_for_kubeapi
 
@@ -104,8 +101,8 @@ module HubClustersCreator
         client.kubectl(generate_bootstrap_job(image))
 
         info 'waiting for the bootstrap to complete successfully'
-        client.wait(BOOTSTRAP_NAME, BOOTSTRAP_NAMESPACE, 'jobs', version: 'batch/v1') do |x|
-          x.status.nil? || x.status['succeeded'] <= 0 ? false : true
+        client.wait('bootstrap', 'kube-system', 'jobs', version: 'batch/v1') do |x|
+          x.status['succeeded'].positive?
         end
 
         # @step: extract the grafana api
@@ -117,109 +114,46 @@ module HubClustersCreator
         grafana_api_key = Base64.decode64(client.get(grafana_key_name, 'kube-system', 'secrets').data.key)
 
         info 'bootstrap has successfully completed'
+        name = 'loki-grafana'
+        namespace = 'metrics'
 
-        # @step: wait for the ingress to appaar and provision and grab the address
-        info 'waiting for grafana ingress load balancer to be provisioned'
-        client.wait('loki-grafana', 'metrics', 'ingresses', version: 'extensions/v1beta1') do |x|
-          x.status.loadBalancer.ingress.empty? ? false : true
+        # @step: grab the loki service
+        svc = client.get(name, namespace, 'services')
+        case svc.spec.type
+        when 'NodePort'
+          resource_type = 'ingresses'
+          resource_version = 'extensions/v1beta1'
+        else
+          resource_type = 'services'
+          resource_version = 'v1'
         end
 
+        info 'waiting for grafana service load balancer to be provisioned'
+        resource = client.wait(name, namespace, resource_type, version: resource_version) do |x|
+          x.status.loadBalancer.ingress.empty? ? false : true
+        end
+        host = resource.status.loadBalancer.ingress.first
+        case svc.spec.type
+        when 'NodePort'
+          host = host.ip
+        else
+          host = host.hostname
+        end
         {
           grafana: {
+            hostname: host,
             key: grafana_api_key,
             password: @config[:grafana_password]
           }
         }
       end
-      # rubocop:enable Metrics/AbcSize
+      # rubocop:enable Metrics/AbcSize, Style/ConditionalAssignment
 
       private
 
       # generate_bootstrap_config returns the helm values for grafana
       def generate_bootstrap_config
-        template = <<~YAML
-          apiVersion: v1
-          kind: ConfigMap
-          metadata:
-            name: #{BOOTSTRAP_NAME}
-            namespace: #{BOOTSTRAP_NAMESPACE}
-          data:
-            charts: |
-              loki/loki-stack,metrics,--values /config/bundles/grafana.yaml
-            repositories: |
-              loki,https://grafana.github.io/loki/charts
-            grafana.yaml: |
-              loki:
-                enabled: true
-                networkPolicy:
-                  enabled: true
-              promtail:
-                enabled: true
-              prometheus:
-                enabled: true
-                server:
-                  fullnameOverride: prometheus-server
-                nodeExporter:
-                  podSecurityPolicy:
-                    enabled: true
-                networkPolicy:
-                  enabled: true
-              grafana:
-                enabled: true
-                adminPassword: <%= context[:grafana_password] %>
-                image:
-                  repository: grafana/grafana
-                  tag: <%= context[:grafana_version] || 'latest' %>
-                  pullPolicy: IfNotPresent
-                sidecar:
-                  datasources:
-                    enabled: true
-                service:
-                  type: NodePort
-                  port: 80
-                  targetPort: 3000
-                ingress:
-                  enabled: true
-                  hosts:
-                    - <%= context[:grafana_hostname] %>.<%= context[:domain] %>
-                  path: '/*'
-                networkPolicy:
-                  enabled: true
-                persistence:
-                  enabled: true
-                  accessModes:
-                    - ReadWriteOnce
-                  size: <%= context[:grafana_disk_size] %><%= context[:grafana_disk_size].to_s.end_with?('Gi') ? '' : 'Gi' %>
-                grafana.ini:
-                  server:
-                    domain: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
-                    root_url: http://<%= context[:grafana_hostname] %>.<%= context[:domain] %>
-                  paths:
-                    data: /var/lib/grafana/data
-                    logs: /var/log/grafana
-                    plugins: /var/lib/grafana/plugins
-                    provisioning: /etc/grafana/provisioning
-                  analytics:
-                    check_for_updates: true
-                  log:
-                    mode: console
-                  grafana_net:
-                    url: https://grafana.net
-                  <%- unless (context[:github_client_id] || '').empty? -%>
-                  auth.github:
-                    allow_sign_up: true
-                    <%- unless (context[:github_organization] || '').empty? %>
-                    allowed_organizations: <%= context[:github_organization] %>
-                    <%- end %>
-                    api_url: https://api.github.com/user
-                    auth_url: https://github.com/login/oauth/authorize
-                    client_id: <%= context[:github_client_id] %>
-                    client_secret: <%= context[:github_client_secret] %>
-                    enabled: true
-                    scopes: user,read:org
-                    token_url: https://github.com/login/oauth/access_token
-                  <%- end -%>
-        YAML
+        template = File.read("#{__dir__}/bootstrap.erb.yaml")
         HubClustersCreator::Utils::Template::Render.new(config).render(template)
       end
 
@@ -229,8 +163,8 @@ module HubClustersCreator
           apiVersion: batch/v1
           kind: Job
           metadata:
-            name: #{BOOTSTRAP_NAME}
-            namespace: #{BOOTSTRAP_NAMESPACE}
+            name: bootstrap
+            namespace: kube-system
           spec:
             backoffLimit: 20
             template:
@@ -264,7 +198,7 @@ module HubClustersCreator
                 volumes:
                 - name: bundle
                   configMap:
-                    name: #{BOOTSTRAP_NAME}
+                    name: bootstrap
         YAML
         template
       end

@@ -21,6 +21,9 @@ Gem::Specification.new do |s|
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
   s.executables   = `git ls-files -- bin/*`.split("\n").map { |f| File.basename(f) }
 
+  s.add_dependency('aws-sdk-cloudformation', '~> 1.25')
+  s.add_dependency('aws-sdk-route53', '~> 1.29.0')
+  s.add_dependency('aws-sigv4', '~> 1.1')
   s.add_dependency('azure_mgmt_compute', '~> 0.18.7')
   s.add_dependency('azure_mgmt_container_service', '~> 0.18.5')
   s.add_dependency('azure_mgmt_dns', '~> 0.17.4')

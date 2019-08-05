@@ -21,6 +21,7 @@ require 'json_schema'
 require 'hub-clusters-creator/errors'
 require 'hub-clusters-creator/logging'
 require 'hub-clusters-creator/providers/aks/azure.rb'
+require 'hub-clusters-creator/providers/eks/eks.rb'
 require 'hub-clusters-creator/providers/gke/gke.rb'
 
 # rubocop:disable Metrics/MethodLength,Metrics/LineLength
@@ -39,12 +40,6 @@ module HubClustersCreator
 
       # @step: create and return a provider instance
       case @provider_name
-      when 'gke'
-        @provider = HubClustersCreator::Providers::GKE.new(
-          account: provider[:account],
-          project: provider[:project],
-          region: provider[:region]
-        )
       when 'aks'
         @provider = HubClustersCreator::Providers::AKS.new(
           client_id: provider[:client_id],
@@ -52,6 +47,19 @@ module HubClustersCreator
           region: provider[:region],
           subscription: provider[:subscription],
           tenant: provider[:tenant]
+        )
+      when 'eks'
+        @provider = HubClustersCreator::Providers::EKS.new(
+          account_id: provider[:account_id],
+          access_id: provider[:access_id],
+          access_key: provider[:access_key],
+          region: provider[:region]
+        )
+      when 'gke'
+        @provider = HubClustersCreator::Providers::GKE.new(
+          account: provider[:account],
+          project: provider[:project],
+          region: provider[:region]
         )
       else
         raise ArgumentError, "cloud provider: #{@provider_name} not supported"
@@ -61,7 +69,7 @@ module HubClustersCreator
 
     # providers provides a list of providers
     def self.providers
-      %w[aks gke]
+      %w[aks eks gke]
     end
 
     # defaults builds the default from the schema

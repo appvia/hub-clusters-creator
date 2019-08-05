@@ -27,11 +27,13 @@ module HubClustersCreator
       options = {
         ssl_verify_peer: false
       }
+      @endpoint = endpoint
+      @endpoint = "https://#{endpoint}" unless endpoint.start_with?('https')
 
       config = K8s::Config.new(
         clusters: [{
           name: 'default',
-          cluster: { server: 'https://' + endpoint, certificate_authority_data: certificate_authority }
+          cluster: { server: @endpoint, certificate_authority_data: certificate_authority }
         }],
         users: [{
           name: 'default',
@@ -47,8 +49,6 @@ module HubClustersCreator
         }],
         current_context: 'default'
       )
-
-      @endpoint = "https://#{endpoint}" unless endpoint.start_with?('https')
       @client = K8s::Client.config(config, options)
     end
 
@@ -93,7 +93,7 @@ module HubClustersCreator
           end
 
           resource = @client.api(version).resource(kind).get(name, namespace: namespace)
-          return if block.call(resource)
+          return resource if block.call(resource)
         rescue Exception => e
           raise e if retries > max_retries
 
