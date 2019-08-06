@@ -68,7 +68,7 @@ data:
         enabled: false
         <%- end -%>
         hosts:
-          - <%= grafanaHostname %>
+          - <%= grafana_hostname %>
         path: '/*'
       networkPolicy:
         enabled: <%= enable_network_policies %>
