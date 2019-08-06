@@ -1,4 +1,20 @@
 ---
+<%-
+  enable_network_policies = true
+  enable_pod_security = true
+  grafana_hostname = "#{context[:grafana_hostname]}.#{context[:domain]}"
+  grafana_image_version = context[:grafana_version] || 'latest'
+  grafana_password = context[:grafana_password]
+  grafana_svc = 'NodePort'
+  grafana_tags = {}
+  case context[:provider]
+  when 'eks'
+    grafana_tags = {
+      'service.beta.kubernetes.io/aws-load-balancer-backend-protocol':'http'
+    }
+    grafana_svc = 'LoadBalancer'
+  end
+-%>
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -13,7 +29,7 @@ data:
     loki:
       enabled: true
       networkPolicy:
-        enabled: true
+        enabled: <%= enable_network_policies %>
     promtail:
       enabled: true
     prometheus:
@@ -22,51 +38,40 @@ data:
         fullnameOverride: prometheus-server
       nodeExporter:
         podSecurityPolicy:
-          enabled: true
+          enabled: <%= enable_pod_security %>
       networkPolicy:
-        enabled: true
+        enabled: <%= enable_network_policies %>
     grafana:
       enabled: true
-      adminPassword: <%= context[:grafana_password] %>
+      adminPassword: <%= grafana_password %>
       image:
         repository: grafana/grafana
-        tag: <%= context[:grafana_version] || 'latest' %>
+        tag: <%= grafana_image_version %>
         pullPolicy: IfNotPresent
       sidecar:
         datasources:
           enabled: true
       service:
-        <%-
-          serviceAnnotations = {}
-          serviceType = 'NodePort'
-          case context[:provider]
-          when 'eks'
-            serviceAnnotations = {
-              'service.beta.kubernetes.io/aws-load-balancer-backend-protocol': 'http'
-            }
-            serviceType = 'LoadBalancer'
-          end
-          -%>
-        type: <%= serviceType %>
-        <%- if serviceAnnotations.size > 0 -%>
+        type: <%= grafana_svc %>
+        <%- if grafana_tags.size > 0 -%>
         annotations:
-        <%- serviceAnnotations.each_pair do |k,v| -%>
+        <%- grafana_tags.each_pair do |k,v| -%>
           '<%= k %>': '<%= v %>'
         <%- end -%>
         <%- end -%>
         port: 80
         targetPort: 3000
       ingress:
-        <%- if serviceType == 'NodePort' -%>
+        <%- if grafana_svc == 'NodePort' -%>
         enabled: true
         <%- else -%>
         enabled: false
         <%- end -%>
         hosts:
-          - <%= context[:grafana_hostname] %>.<%= context[:domain] %>
+          - <%= grafanaHostname %>
         path: '/*'
       networkPolicy:
-        enabled: true
+        enabled: <%= enable_network_policies %>
       persistence:
         enabled: true
         accessModes:
@@ -74,8 +79,8 @@ data:
         size: <%= context[:grafana_disk_size] %><%= context[:grafana_disk_size].to_s.end_with?('Gi') ? '' : 'Gi' %>
       grafana.ini:
         server:
-          domain: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
-          root_url: http://<%= context[:grafana_hostname] %>.<%= context[:domain] %>
+          domain: <%= grafana_hostname %>
+          root_url: http://<%= grafana_hostname %>
         paths:
           data: /var/lib/grafana/data
           logs: /var/log/grafana

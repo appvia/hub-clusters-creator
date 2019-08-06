@@ -153,7 +153,7 @@ module HubClustersCreator
 
       # generate_bootstrap_config returns the helm values for grafana
       def generate_bootstrap_config
-        template = File.read("#{__dir__}/bootstrap.erb.yaml")
+        template = File.read("#{__dir__}/bootstrap.erb")
         HubClustersCreator::Utils::Template::Render.new(config).render(template)
       end
 
