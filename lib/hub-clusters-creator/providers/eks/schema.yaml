@@ -169,10 +169,10 @@ properties:
     $id: '#/properties/ssh_keypair'
     tag: default
     type: string
-    title: Max Size
+    title: SSH Keypair
     default: ''
     description: >
-      The SSH keypair which the nodegroup should be provisioned to use.
+      The AWS SSH keypair which the nodegroup should be provisioned to use.
     examples:
       - default
     pattern: ^(.*)$
