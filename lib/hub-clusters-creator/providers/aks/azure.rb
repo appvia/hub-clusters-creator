@@ -196,6 +196,9 @@ module HubClustersCreator
           },
           config: config,
           services: {
+            catalog: {
+              namespace: 'catalog'
+            },
             grafana: {
               api_key: result[:grafana][:key],
               url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"

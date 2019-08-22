@@ -205,7 +205,8 @@ module HubClustersCreator
                     'https://www.googleapis.com/auth/logging.write',
                     'https://www.googleapis.com/auth/monitoring'
                   ],
-                  preemptible: options[:preemptible]
+                  preemptible: options[:preemptible],
+                  tags: options[:name]
                 ),
                 initial_node_count: options[:size],
                 locations: locations,
@@ -311,6 +312,32 @@ module HubClustersCreator
             end
           end
           list
+        end
+
+        # add_firewall_rule is used to add a firewall rule if it doesn't already exist
+        def add_firewall_rule(name:, network:, source:, targets:, ports:)
+          rule = Google::Apis::ComputeBeta::Firewall.new(
+            name: name,
+            description: 'Provider GKE masters access to nodes',
+            direction: 'INGRESS',
+            enable_logging: false,
+            network: network,
+            source_ranges: source,
+            target_tags: targets,
+            allowed: []
+          )
+          ports.each do |x|
+            rule.push(Google::Apis::ComputeBeta::Firewall::Allowed.new(
+                        ip_protocol: x.split(':', x).first,
+                        ports: x.split(':', x).last
+                      ))
+          end
+
+          if @compute.get_firewall(@project, name).nil?
+            @compute.insert_firewall(@project, name, rule)
+          else
+            @compute.patch_firewall(@project, name, rule)
+          end
         end
 
         # subnet? checks if the subnet exists in the project, network and region

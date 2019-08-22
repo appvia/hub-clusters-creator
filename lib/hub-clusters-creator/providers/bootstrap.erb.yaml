@@ -7,8 +7,10 @@ metadata:
 data:
   charts: |
     loki/loki-stack,metrics,--values /config/bundles/grafana.yaml
+    svc-cat/catalog,catalog,
   repositories: |
     loki,https://grafana.github.io/loki/charts
+    svc-cat,https://svc-catalog-charts.storage.googleapis.com
   grafana.yaml: |
     loki:
       enabled: true
