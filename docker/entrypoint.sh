@@ -23,9 +23,9 @@ error()    { log "[$(date)][error] $@";  }
 
 CONFIG_DIR="${CONFIG_DIR:-"/config"}"
 GITHUB_RAW_URL="https://raw.githubusercontent.com"
-HELM_BUNDLES="${HELM_DIR}/charts"
 HELM_DIR="${CONFIG_DIR}/bundles"
 HELM_REPOS="${HELM_DIR}/repositories"
+HELM_BUNDLES="${HELM_DIR}/charts"
 KUBE_DIR="${CONFIG_DIR}/manifests"
 
 provision-olm() {

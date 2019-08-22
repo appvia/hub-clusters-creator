@@ -206,7 +206,7 @@ module HubClustersCreator
                     'https://www.googleapis.com/auth/monitoring'
                   ],
                   preemptible: options[:preemptible],
-                  tags: options[:name]
+                  tags: [options[:name]]
                 ),
                 initial_node_count: options[:size],
                 locations: locations,
@@ -315,28 +315,30 @@ module HubClustersCreator
         end
 
         # add_firewall_rule is used to add a firewall rule if it doesn't already exist
-        def add_firewall_rule(name:, network:, source:, targets:, ports:)
+        def add_firewall_rule(name, network_name, source, targets, ports)
           rule = Google::Apis::ComputeBeta::Firewall.new(
             name: name,
             description: 'Provider GKE masters access to nodes',
             direction: 'INGRESS',
             enable_logging: false,
-            network: network,
-            source_ranges: source,
-            target_tags: targets,
+            network: network(network_name),
+            source_ranges: [source],
+            target_tags: [targets],
             allowed: []
           )
           ports.each do |x|
-            rule.push(Google::Apis::ComputeBeta::Firewall::Allowed.new(
-                        ip_protocol: x.split(':', x).first,
-                        ports: x.split(':', x).last
+            rule.allowed.push(Google::Apis::ComputeBeta::Firewall::Allowed.new(
+                        ip_protocol: x.split(':').first,
+                        ports: x.split(':').last.split(',')
                       ))
           end
 
-          if @compute.get_firewall(@project, name).nil?
-            @compute.insert_firewall(@project, name, rule)
+          item = @compute.list_firewalls(@project).items.select { |x| x.name == name }
+          case item.empty?
+          when true
+            @compute.insert_firewall(@project, rule)
           else
-            @compute.patch_firewall(@project, name, rule)
+            @compute.update_firewall(@project, name, rule)
           end
         end
 

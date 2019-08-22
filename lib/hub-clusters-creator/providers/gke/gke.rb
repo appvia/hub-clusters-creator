@@ -178,11 +178,11 @@ module HubClustersCreator
           end
 
           info 'creating a firewall rule to permit master access (apiservices)'
-          add_firewall_rule("#{config[:name]}-masters",
+          add_firewall_rule("allow-#{config[:name]}-masters",
                             config[:network],
                             config[:master_ipv4_cidr_block],
                             config[:name],
-                            'tcp:8443')
+                            ['tcp:443,5443,8443'])
         end
 
         info "provisioning a dns entry for the master api = > #{gke.endpoint}"
