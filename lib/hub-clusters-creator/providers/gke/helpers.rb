@@ -321,7 +321,7 @@ module HubClustersCreator
             description: 'Provider GKE masters access to nodes',
             direction: 'INGRESS',
             enable_logging: false,
-            network: network(network_name),
+            network: network(network_name).self_link,
             source_ranges: [source],
             target_tags: [targets],
             allowed: []
