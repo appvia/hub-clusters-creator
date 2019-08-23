@@ -161,7 +161,7 @@ module HubClustersCreator
             on_failure: 'DO_NOTHING',
             parameters: parameters,
             template_url: template_url,
-            timeout_in_minutes: 20
+            timeout_in_minutes: 30
           )
         end
 
