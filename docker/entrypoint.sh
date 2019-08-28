@@ -124,12 +124,19 @@ deploy-bundles() {
     while IFS=',' read chart namespace options; do
       namespace=${namespace:-"default"}
       name=${chart%%/*}
-      if helm ls | grep -v ^name; then
+      if helm ls --deployed | grep ^${name}; then
         info "upgrading chart: ${chart}, namespace: ${namespace}, options: ${options}"
         helm upgrade --install --wait ${name} ${chart} --namespace ${namespace} ${options} || return 1
       else
-        info "upgrading chart: ${chart}, namespace: ${namespace}, options: ${options}"
+        info "installing chart: ${chart}, namespace: ${namespace}, options: ${options}"
         helm install --wait ${chart} --namespace ${namespace} --name ${name} ${options} || return 1
+      fi
+      if [ "${namespace}" != "default" ]; then
+        # helm --wait DOES NOT wait for ready deployments properly
+        info "waiting for ready deployments on namespace \"${namespace}\""
+        for deployment in $(kubectl -n ${namespace} get deployment -o name); do
+          kubectl rollout status -n ${namespace} ${deployment}
+        done
       fi
     done < <(cat ${HELM_BUNDLES})
   fi

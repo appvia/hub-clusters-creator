@@ -67,12 +67,12 @@ required:
   - machine_type
   - name
   - network
-  - private_subnet1
-  - private_subnet2
-  - private_subnet3
-  - public_subnet1
-  - public_subnet2
-  - public_subnet3
+  - private_subnet1_cidr
+  - private_subnet2_cidr
+  - private_subnet3_cidr
+  - public_subnet1_cidr
+  - public_subnet2_cidr
+  - public_subnet3_cidr
   - size
   - ssh_keypair
   - version

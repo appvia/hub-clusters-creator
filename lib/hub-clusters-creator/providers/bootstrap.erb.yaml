@@ -8,9 +8,11 @@ data:
   charts: |
     loki/loki-stack,metrics,--values /config/bundles/grafana.yaml
     svc-cat/catalog,catalog,
+    aws-sb/aws-servicebroker,aws-sb,--set-string aws.targetaccountid=<%= context[:account_id] %> --set aws.region=<%= context[:region] %> --set aws.accesskeyid=<%= context[:access_id] %> --set aws.secretkey=<%= context[:access_key] %>
   repositories: |
     loki,https://grafana.github.io/loki/charts
     svc-cat,https://svc-catalog-charts.storage.googleapis.com
+    aws-sb,https://awsservicebroker.s3.amazonaws.com/charts
   grafana.yaml: |
     loki:
       enabled: true
