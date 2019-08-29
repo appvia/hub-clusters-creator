@@ -105,7 +105,7 @@ module HubClustersCreator
         {
           cluster: {
             ca: outputs['EKSCA'],
-            endpoint: 'https://' + outputs['EKSEndpoint'],
+            endpoint: outputs['EKSEndpoint'],
             global_service_account_name: 'default',
             global_service_account_token: Base64.decode64(client.account('robot', 'default')),
             service_account_name: 'sysadmin',
