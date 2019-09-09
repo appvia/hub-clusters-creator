@@ -287,6 +287,18 @@ properties:
       - 6.2.5
     pattern: ^(.*)$
 
+  olm_version:
+    $id: '#/properties/olm_version'
+    tag: advanced
+    type: string
+    title: Operator Lifecycle Version
+    default: '0.11.0'
+    description: >
+      The version of the Operator Lifecycle Manager to install in cluster.
+    examples:
+      - 0.11.0
+    pattern: ^(.*)$
+
   network:
     $id: '#/properties/network'
     tag: default

@@ -22,10 +22,32 @@ failed()   { log "[$(date)][fail] $@";   }
 error()    { log "[$(date)][error] $@";  }
 
 CONFIG_DIR="${CONFIG_DIR:-"/config"}"
+GITHUB_RAW_URL="https://raw.githubusercontent.com"
 HELM_DIR="${CONFIG_DIR}/bundles"
 HELM_REPOS="${HELM_DIR}/repositories"
 HELM_BUNDLES="${HELM_DIR}/charts"
 KUBE_DIR="${CONFIG_DIR}/manifests"
+
+provision-olm() {
+  info "provisioning the operator lifecycle manager, version: ${OLM_VERSION}"
+  for file in {crds,olm}.yaml; do
+    if [[ ! -f "/tmp/${file}" ]]; then
+      file_link="${GITHUB_RAW_URL}/operator-framework/operator-lifecycle-manager/${OLM_VERSION}/deploy/upstream/quickstart/${file}"
+      info "downloading the manifest file: ${file_link}"
+      if ! curl -sL "${file_link}" -o /tmp/${file}; then
+        error "failed to downloading the manifest: ${file_link}"
+        exit 1
+      fi
+    fi
+    if ! kubectl apply -f /tmp/${file}; then
+      error "failed to provision olm manifest: ${file}"
+      exit 1
+    fi
+  done
+
+  info "operator lifecycle manager should be provisioning"
+}
+
 
 provision-grafana() {
   # @step: we need to check if the api already get exists
@@ -102,12 +124,19 @@ deploy-bundles() {
     while IFS=',' read chart namespace options; do
       namespace=${namespace:-"default"}
       name=${chart%%/*}
-      if helm ls | grep -v ^name; then
+      if helm ls --deployed | grep ^${name}; then
         info "upgrading chart: ${chart}, namespace: ${namespace}, options: ${options}"
         helm upgrade --install --wait ${name} ${chart} --namespace ${namespace} ${options} || return 1
       else
-        info "upgrading chart: ${chart}, namespace: ${namespace}, options: ${options}"
+        info "installing chart: ${chart}, namespace: ${namespace}, options: ${options}"
         helm install --wait ${chart} --namespace ${namespace} --name ${name} ${options} || return 1
+      fi
+      if [ "${namespace}" != "default" ]; then
+        # helm --wait DOES NOT wait for ready deployments properly
+        info "waiting for ready deployments on namespace \"${namespace}\""
+        for deployment in $(kubectl -n ${namespace} get deployment -o name); do
+          kubectl rollout status -n ${namespace} ${deployment}
+        done
       fi
     done < <(cat ${HELM_BUNDLES})
   fi
@@ -137,4 +166,9 @@ else
     error "failed to provision the secret, we will retry with a backoff"
     sleep 5
   done
+fi
+
+if ! provision-olm; then
+  error "failed to provision the olm"
+  exit
 fi

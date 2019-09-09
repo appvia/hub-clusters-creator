@@ -65,7 +65,7 @@ module HubClustersCreator
       YAML
 
       # is the name of the container image
-      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:v0.0.8'
+      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:latest'
 
       attr_accessor :client, :config, :name
 
@@ -192,6 +192,8 @@ module HubClustersCreator
                     value: kube-system
                   - name: GRAFANA_SCHEMA
                     value: http
+                  - name: OLM_VERSION
+                    value: '#{@config[:olm_version]}'
                   volumeMounts:
                   - name: bundle
                     mountPath: /config/bundles

@@ -128,6 +128,9 @@ module HubClustersCreator
           },
           config: config,
           services: {
+            catalog: {
+              namespace: 'catalog'
+            },
             grafana: {
               api_key: result[:grafana][:key],
               url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"
@@ -173,6 +176,13 @@ module HubClustersCreator
               patch_router('router', x)
             end
           end
+
+          info 'creating a firewall rule to permit master access (apiservices)'
+          add_firewall_rule("allow-#{config[:name]}-masters",
+                            config[:network],
+                            config[:master_ipv4_cidr_block],
+                            config[:name],
+                            ['tcp:443,5443,8443'])
         end
 
         info "provisioning a dns entry for the master api = > #{gke.endpoint}"

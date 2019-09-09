@@ -92,6 +92,10 @@ module HubClustersCreator
 
         # @step: provision the cluster
         info 'bootstraping the eks cluster'
+        config[:account_id] = @account_id
+        config[:access_id] = @access_id
+        config[:access_key] = @access_key
+        config[:region] = @region
         result = HubClustersCreator::Providers::Bootstrap.new(name, 'eks', client, config).bootstrap
         address = result[:grafana][:hostname]
 
@@ -101,7 +105,7 @@ module HubClustersCreator
         {
           cluster: {
             ca: outputs['EKSCA'],
-            endpoint: 'https://' + outputs['EKSEndpoint'],
+            endpoint: outputs['EKSEndpoint'],
             global_service_account_name: 'default',
             global_service_account_token: Base64.decode64(client.account('robot', 'default')),
             service_account_name: 'sysadmin',
@@ -110,6 +114,12 @@ module HubClustersCreator
           },
           config: config,
           services: {
+            catalog: {
+              namespace: 'catalog'
+            },
+            aws_sb: {
+              namespace: 'aws-sb'
+            },
             grafana: {
               api_key: result[:grafana][:key],
               url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"
