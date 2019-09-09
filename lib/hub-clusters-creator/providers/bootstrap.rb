@@ -65,7 +65,7 @@ module HubClustersCreator
       YAML
 
       # is the name of the container image
-      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:latest'
+      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:v0.0.9'
 
       attr_accessor :client, :config, :name
 
