@@ -41,6 +41,6 @@ puts creator.provision(
   grafana_ingress: true,
   machine_type: 'n1-standard-1',
   name: 'test',
-  size: 3,
+  size: 1,
   version: '1.13.7-gke.8'
 )
