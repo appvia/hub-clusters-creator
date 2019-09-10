@@ -36,7 +36,7 @@ module HubClustersCreator
         @access_key = options[:access_key]
         @region = options[:region]
         @templates_bucket = options[:bucket] || 'hub-clusters-creator-eu-west-2'
-        @templates_version = options[:version] || 'eks/v0.0.1'
+        @templates_version = options[:version] || 'v0.0.1'
       end
 
       # create is the entrypoint for creating a cluster

@@ -1,0 +1,240 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Deploys an EKS cluster into an existing VPC (qs-1p7nknoi6)
+
+Parameters:
+  ClusterName:
+    AllowedPattern: ^[0-9a-zA-Z-/.]*$
+    Description: >
+      The name of the cluster we are creating, which will be prefixed to
+      all the resources provisioned.
+    Type: String
+  BucketName:
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    Description: >
+      S3 bucket name for the Quick Start assets. This string can include
+      numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  BucketVersion:
+    AllowedPattern: ^[0-9a-zA-Z-/.]*$
+    Description: >
+      The version of prefix for the CloudFormation templates
+    Type: String
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+  NodeAMIOS:
+    AllowedValues:
+      - Amazon-Linux-HVM
+    Default: Amazon-Linux-HVM
+    Type: String
+  RemoteAccessCIDR:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Type: String
+  NodeInstanceType:
+    Default: t3.medium
+    AllowedValues:
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - t3.nano
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+      - m3.medium
+      - m3.large
+      - m3.xlarge
+      - m3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+      - m5.12xlarge
+      - m5.24xlarge
+      - c4.large
+      - c4.xlarge
+      - c4.2xlarge
+      - c4.4xlarge
+      - c4.8xlarge
+      - c5.large
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - c5.18xlarge
+      - i3.large
+      - i3.xlarge
+      - i3.2xlarge
+      - i3.4xlarge
+      - i3.8xlarge
+      - i3.16xlarge
+      - r3.xlarge
+      - r3.2xlarge
+      - r3.4xlarge
+      - r3.8xlarge
+      - r4.large
+      - r4.xlarge
+      - r4.2xlarge
+      - r4.4xlarge
+      - r4.8xlarge
+      - r4.16xlarge
+      - x1.16xlarge
+      - x1.32xlarge
+      - p2.xlarge
+      - p2.8xlarge
+      - p2.16xlarge
+      - p3.2xlarge
+      - p3.8xlarge
+      - p3.16xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r5.12xlarge
+      - r5.24xlarge
+      - r5d.large
+      - r5d.xlarge
+      - r5d.2xlarge
+      - r5d.4xlarge
+      - r5d.12xlarge
+      - r5d.24xlarge
+      - z1d.large
+      - z1d.xlarge
+      - z1d.2xlarge
+      - z1d.3xlarge
+      - z1d.6xlarge
+      - z1d.12xlarge
+    ConstraintDescription: Must be a valid EC2 instance type
+    Type: String
+  NumberOfNodes:
+    Default: 3
+    Type: Number
+  MaxNumberOfNodes:
+    Default: 3
+    Type: Number
+  NodeGroupName:
+    Default: compute
+    Type: String
+  NodeVolumeSize:
+    Default: 20
+    Type: String
+  VPCID:
+    Type: "AWS::EC2::VPC::Id"
+  PublicSubnet1ID:
+    Type: "AWS::EC2::Subnet::Id"
+  PublicSubnet2ID:
+    Type: "AWS::EC2::Subnet::Id"
+  PublicSubnet3ID:
+    Type: "AWS::EC2::Subnet::Id"
+  PrivateSubnet1ID:
+    Type: "AWS::EC2::Subnet::Id"
+  PrivateSubnet2ID:
+    Type: "AWS::EC2::Subnet::Id"
+  PrivateSubnet3ID:
+    Type: "AWS::EC2::Subnet::Id"
+  KubernetesVersion:
+    Type: String
+    AllowedValues: ["1.13", "1.12", "1.11"]
+    Default: "1.13"
+  ProvisionClusterAutoScaler:
+    Type: String
+    AllowedValues: ["Enabled", "Disabled"]
+    Default: "Disabled"
+  BootstrapArguments:
+    Type: String
+    Default: ""
+
+Conditions:
+  EnableClusterAutoScaler: !Equals [!Ref 'ProvisionClusterAutoScaler', 'Enabled']
+
+Resources:
+  NodeGroupStack:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: !Sub 'https://${BucketName}.s3.amazonaws.com/${BucketVersion}/aws-eks-nodegroup.yaml'
+      Parameters:
+        ClusterName: !Ref ClusterName
+        BootstrapArguments: !Ref BootstrapArguments
+        ControlPlaneSecurityGroup: !Ref ControlPlaneSecurityGroup
+        EKSControlPlaneArn: !GetAtt EKS.Arn
+        KeyPairName: !Ref KeyPairName
+        KubernetesVersion: !Ref KubernetesVersion
+        MaxNumberOfNodes: !Ref MaxNumberOfNodes
+        NodeAMIOS: !Ref NodeAMIOS
+        NodeGroupName: !Ref NodeGroupName
+        NodeInstanceProfile: !GetAtt IamStack.Outputs.NodeInstanceProfile
+        NodeInstanceRoleName: !GetAtt IamStack.Outputs.NodeInstanceRoleName
+        NodeInstanceType: !Ref NodeInstanceType
+        NodeVolumeSize: !Ref NodeVolumeSize
+        NumberOfNodes: !Ref NumberOfNodes
+        PrivateSubnet1ID: !Ref PrivateSubnet1ID
+        PrivateSubnet2ID: !Ref PrivateSubnet2ID
+        PrivateSubnet3ID: !Ref PrivateSubnet3ID
+        VPCID: !Ref VPCID
+
+  IamStack:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: !Sub 'https://${BucketName}.s3.amazonaws.com/${BucketVersion}/aws-eks-iam.yaml'
+      Parameters:
+        ClusterName: !Ref ClusterName
+
+  ControlPlaneSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Cluster communication
+      VpcId: !Ref VPCID
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref ClusterName, '-controlpane']]
+
+  EKS:
+    Type: "AWS::EKS::Cluster"
+    Properties:
+      Name: !Ref ClusterName
+      ResourcesVpcConfig:
+        SecurityGroupIds:
+          - !Ref ControlPlaneSecurityGroup
+        SubnetIds:
+          Fn::Split:
+            - ','
+            - Fn::Join:
+                - ','
+                - - !Ref PrivateSubnet1ID
+                  - !Ref PrivateSubnet2ID
+                  - !Ref PrivateSubnet3ID
+                  - !Ref PublicSubnet1ID
+                  - !Ref PublicSubnet2ID
+                  - !Ref PublicSubnet3ID
+      RoleArn: !GetAtt IamStack.Outputs.ControlPlaneRoleArn
+      Version: !Ref KubernetesVersion
+
+Outputs:
+  EKSName:
+    Value: !Ref ClusterName
+  EKSArn:
+    Value: !GetAtt EKS.Arn
+  EKSEndpoint:
+    Value: !GetAtt EKS.Endpoint
+  EKSCA:
+    Value: !GetAtt EKS.CertificateAuthorityData
+  NodeInstanceProfile:
+    Value: !GetAtt IamStack.Outputs.NodeInstanceProfile
+  NodeInstanceRoleName:
+    Value: !GetAtt IamStack.Outputs.NodeInstanceRoleName
+  ControlPlaneSecurityGroup:
+    Value: !GetAtt ControlPlaneSecurityGroup.GroupId
+  NodeGroupSecurityGroup:
+    Value: !GetAtt NodeGroupStack.Outputs.EKSNodeSecurityGroup
+  NodeInstanceRoleArn:
+    Value: !GetAtt IamStack.Outputs.NodeInstanceRoleArn

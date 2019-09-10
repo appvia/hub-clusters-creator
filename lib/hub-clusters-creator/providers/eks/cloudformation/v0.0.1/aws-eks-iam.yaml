@@ -1,0 +1,64 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Deploys IAM roles and policies required for the AWS EKS
+
+Parameters:
+  ClusterName:
+    AllowedPattern: ^[0-9a-zA-Z-/.]*$
+    Description: >
+      The name of the cluster we are creating, which will be prefixed to
+      all the resources provisioned.
+    Type: String
+
+Resources:
+  ControlPlaneRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Join ['-', [!Ref ClusterName, 'controlplane-role']]
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: eks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+        - arn:aws:iam::aws:policy/AmazonEKSServicePolicy
+
+  NodeInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Join ['-', [!Ref ClusterName, 'instance-profile']]
+      Path: "/"
+      Roles:
+        - !Ref NodeInstanceRole
+
+  NodeInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['-', [!Ref ClusterName, 'instance-role']]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+
+Outputs:
+  ControlPlaneRoleArn:
+    Value: !GetAtt ControlPlaneRole.Arn
+  NodeInstanceProfile:
+    Value: !Ref NodeInstanceProfile
+  NodeInstanceRoleArn:
+    Value: !GetAtt NodeInstanceRole.Arn
+  NodeInstanceRoleName:
+    Value: !Ref NodeInstanceRole
