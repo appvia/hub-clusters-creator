@@ -44,11 +44,11 @@ module HubClustersCreator
       def create(name, config)
         # @step: build the paramaters
         parameters = [
-          { parameter_key: 'ClusterName', parameter_value: name },
           { parameter_key: 'AvailabilityZones', parameter_value: config[:availability_zones] },
           { parameter_key: 'BucketName', parameter_value: @templates_bucket },
           { parameter_key: 'BucketVersion', parameter_value: @templates_version },
           { parameter_key: 'ClusterAutoScaler', parameter_value: 'Enabled' },
+          { parameter_key: 'ClusterName', parameter_value: name },
           { parameter_key: 'KeyPairName', parameter_value: config[:ssh_keypair] },
           { parameter_key: 'KubernetesVersion', parameter_value: config[:version] },
           { parameter_key: 'NodeGroupName', parameter_value: 'compute' },
