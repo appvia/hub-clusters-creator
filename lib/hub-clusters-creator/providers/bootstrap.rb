@@ -153,8 +153,9 @@ module HubClustersCreator
 
       # generate_bootstrap_config returns the helm values for grafana
       def generate_bootstrap_config
-        template = File.read("#{__dir__}/bootstrap.erb.yaml")
-        HubClustersCreator::Utils::Template::Render.new(config).render(template)
+        HubClustersCreator::Utils::Template::Render
+          .new(config)
+          .render(File.read("#{__dir__}/bootstrap.erb.yaml"))
       end
 
       # generate_bootstrap_job is responsible for generating the bootstrap job

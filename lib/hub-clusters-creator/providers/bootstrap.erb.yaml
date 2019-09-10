@@ -5,18 +5,26 @@ metadata:
   name: bootstrap
   namespace: kube-system
 data:
-  charts: |
-    loki/loki-stack,metrics,--values /config/bundles/grafana.yaml
-    svc-cat/catalog,catalog,
-    <%- if context[:provider].equal?('eks') -%>
-    aws-sb/aws-servicebroker,aws-sb,--set-string aws.targetaccountid=<%= context[:account_id] %> --set aws.region=<%= context[:region] %> --set aws.accesskeyid=<%= context[:access_id] %> --set aws.secretkey=<%= context[:access_key] %>
-    <%- end -%>
   repositories: |
+    # installation of loki stack
     loki,https://grafana.github.io/loki/charts
+    # installation of the service catalog
     svc-cat,https://svc-catalog-charts.storage.googleapis.com
     <%- if context[:provider].equal?('eks') -%>
+    # installation of the aws service broker
     aws-sb,https://awsservicebroker.s3.amazonaws.com/charts
     <%- end -%>
+
+  charts: |
+    # helm source for loki stack
+    loki/loki-stack,metrics,--values /config/bundles/grafana.yaml
+    # helm source for the service catalog
+    svc-cat/catalog,catalog,
+    <%- if context[:provider].equal?('eks') -%>
+    # helm source for the aws service broker
+    aws-sb/aws-servicebroker,aws-sb,--set-string aws.targetaccountid=<%= context[:account_id] %> --set aws.region=<%= context[:region] %> --set aws.accesskeyid=<%= context[:access_id] %> --set aws.secretkey=<%= context[:access_key] %>
+    <%- end -%>
+
   grafana.yaml: |
     loki:
       enabled: true
@@ -37,28 +45,28 @@ data:
       enabled: true
       adminPassword: <%= context[:grafana_password] %>
       image:
+        pullPolicy: IfNotPresent
         repository: grafana/grafana
         tag: <%= context[:grafana_version] || 'latest' %>
-        pullPolicy: IfNotPresent
       sidecar:
         datasources:
           enabled: true
       service:
         <%-
-          serviceAnnotations = {}
+          annotations = {}
           serviceType = 'NodePort'
           case context[:provider]
           when 'eks'
-            serviceAnnotations = {
+            annotations = {
               'service.beta.kubernetes.io/aws-load-balancer-backend-protocol': 'http'
             }
             serviceType = 'LoadBalancer'
           end
           -%>
         type: <%= serviceType %>
-        <%- if serviceAnnotations.size > 0 -%>
+        <%- if annotations.size > 0 -%>
         annotations:
-        <%- serviceAnnotations.each_pair do |k,v| -%>
+        <%- annotations.each_pair do |k,v| -%>
           '<%= k %>': '<%= v %>'
         <%- end -%>
         <%- end -%>

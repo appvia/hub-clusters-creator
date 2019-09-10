@@ -113,7 +113,7 @@ deploy-bundles() {
     while IFS=',' read name repository; do
       info "adding the helm repository: ${repository}"
       helm repo add ${name} ${repository} || return 1
-    done < <(cat ${HELM_REPOS})
+    done < <(cat ${HELM_REPOS} | sed /^#/d)
 
     info "updating the repositories cache"
     helm repo update || return 1
@@ -138,7 +138,7 @@ deploy-bundles() {
           kubectl rollout status -n ${namespace} ${deployment}
         done
       fi
-    done < <(cat ${HELM_BUNDLES})
+    done < <(cat ${HELM_BUNDLES} | sed /^#/d)
   fi
 }
 
