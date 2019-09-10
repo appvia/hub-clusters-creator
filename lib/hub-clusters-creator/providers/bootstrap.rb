@@ -81,7 +81,7 @@ module HubClustersCreator
       # a) pushes in the configuration for the bootstrapper
       # b) rolls out the kubernetes job to bootstrap the cluster
       # c) grabs the services and provisions the dns
-      # rubocop:disable Metrics/AbcSize, Style/ConditionalAssignment
+      # rubocop:disable Metrics/AbcSize, Style/ConditionalAssignment, Metrics/CyclomaticComplexity:
       def bootstrap(image = BOOTSTRAP_IMAGE)
         client.wait_for_kubeapi
 
@@ -102,7 +102,7 @@ module HubClustersCreator
 
         info 'waiting for the bootstrap to complete successfully'
         client.wait('bootstrap', 'kube-system', 'jobs', version: 'batch/v1') do |x|
-          x.status['succeeded'].positive?
+          (x.status['succeeded'] || 0).positive?
         end
 
         # @step: extract the grafana api
@@ -147,7 +147,7 @@ module HubClustersCreator
           }
         }
       end
-      # rubocop:enable Metrics/AbcSize, Style/ConditionalAssignment
+      # rubocop:enable Metrics/AbcSize, Style/ConditionalAssignment, Metrics/CyclomaticComplexity:
 
       private
 
