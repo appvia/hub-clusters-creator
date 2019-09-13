@@ -152,6 +152,11 @@ if ! deploy-bundles; then
   exit 1
 fi
 
+if ! provision-olm; then
+  error "failed to provision the olm"
+  exit
+fi
+
 if ! provision-grafana; then
   error "failed provision grafana instance"
   exit 1
@@ -168,7 +173,3 @@ else
   done
 fi
 
-if ! provision-olm; then
-  error "failed to provision the olm"
-  exit
-fi
