@@ -115,13 +115,14 @@ properties:
     tag: default
     type: string
     title: Initial Kubernetes Version
-    default: '1.13.7-gke.8'
+    default: 'v1.14.6-gke.1'
     description: >
       The initial kubernetes version which the cluster should be
       configured with.
     examples:
       - latest
       - 1.13.7-gke.8
+      - v1.14.6-gke.1
     pattern: ^(.*)$
 
   size:
