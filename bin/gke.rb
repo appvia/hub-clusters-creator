@@ -42,5 +42,5 @@ puts creator.provision(
   machine_type: 'n1-standard-1',
   name: 'test',
   size: 1,
-  version: '1.14.6-gke.1'
+  version: '1.14.3-gke.11'
 )
