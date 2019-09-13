@@ -101,8 +101,8 @@ properties:
     title: DNS Domain
     default: ''
     description: >
-      The dns domain which the cluster is using; this mist be accessible from
-      with inside the project.
+      All DNS records for the cluster will created within this domain;
+      this must be a domain accessible from the Azure project.
     examples:
       - 'example.com'
 
