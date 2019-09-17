@@ -6,18 +6,15 @@ metadata:
   namespace: kube-system
 data:
   repositories: |
-    # installation of loki stack
-    loki,https://grafana.github.io/loki/charts
-    # installation of the service catalog
+    # @TODO need to figure out a way to install this via the OLM - it's
+    # due the use of a genCert which is causing the OLM to cycle the
+    # deployments
     svc-cat,https://svc-catalog-charts.storage.googleapis.com
-    <%- if context[:provider].equal?('eks') -%>
     # installation of the aws service broker
     aws-sb,https://awsservicebroker.s3.amazonaws.com/charts
     <%- end -%>
 
   charts: |
-    # helm source for loki stack
-    loki/loki-stack,metrics,--values /config/bundles/grafana.yaml
     # helm source for the service catalog
     svc-cat/catalog,catalog,
     <%- if context[:provider].equal?('eks') -%>
@@ -25,92 +22,128 @@ data:
     aws-sb/aws-servicebroker,aws-sb,--set-string aws.targetaccountid=<%= context[:account_id] %> --set aws.region=<%= context[:region] %> --set aws.accesskeyid=<%= context[:access_id] %> --set aws.secretkey=<%= context[:access_key] %>
     <%- end -%>
 
+  #
+  ## Metrics namespace
+  #
+  namespaces.yaml: |
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: prometheus
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: brokers
+
+  #
+  ## Catalog
+  #
+  catalog.yaml: |
+    ---
+    apiVersion: operators.coreos.com/v1alpha1
+    kind: CatalogSource
+    metadata:
+      name: appvia-catalog
+      namespace: olm
+    spec:
+      image: quay.io/appvia/operator-catalog:v0.0.1
+      displayName: Appvia Operators
+      publisher: Appvia.io
+      sourceType: grpc
+
+  #
+  ## Operator groups
+  #
+  operatorgroups.yaml: |
+    ---
+    apiVersion: operators.coreos.com/v1
+    kind: OperatorGroup
+    metadata:
+      name: operator-group
+      namespace: <%= namespace %>
+    spec:
+      namespaces:
+        - <%= namespace %>
+    ---
+    apiVersion: operators.coreos.com/v1
+    kind: OperatorGroup
+    metadata:
+      name: operator-group
+      namespace: broker
+
+  #
+  ## Operator subscriptions
+  #
+  <%-
+    namespace = "prometheus"
+    operators = [
+      { package: 'prometheusoperator', channel: 'beta',  version: '0.33.0' },
+      { package: 'grafana-operator',   channel: 'alpha', version: 'v1.3.0' },
+      { package: 'loki-operator', channel: 'stable', version: 'v0.0.1' },
+      { package: 'metrics-operator', channel: 'stable', version: 'v0.0.2' },
+    ]
+  -%>
+  <%- operators.each do |x| %>
+  <%= x[:package] %>.yaml: |
+    apiVersion: operators.coreos.com/v1alpha1
+    kind: Subscription
+    metadata:
+      name: <%= x[:package] %>
+      namespace: <%= namespace %>
+    spec:
+      name: <%= x[:package] %>
+      channel: <%= x[:channel] %>
+      installPlanApproval: Automatic
+      source: appvia-catalog
+      sourceNamespace: olm
+      startingCSV: <%= x[:package].<%= x[:version] %>
+  <%- end %>
+
+  <%- if context[:provider].equal?('eks') -%>
+  aws-broker-operator.yaml: |
+    apiVersion: operators.coreos.com/v1alpha1
+    kind: Subscription
+    metadata:
+      name: aws-broker-operator
+      namespace: <%= namespace %>
+    spec:
+      name: aws-broker
+      channel: stable
+      installPlanApproval: Automatic
+      source: appvia-catalog
+      sourceNamespace: olm
+      startingCSV: aws-broker-operator.v0.0.1
+  <%- end %>
+
+  #
+  ## Grafana
+  #
   grafana.yaml: |
-    loki:
-      enabled: true
-      networkPolicy:
-        enabled: true
-    promtail:
-      enabled: true
-    prometheus:
-      enabled: true
-      server:
-        fullnameOverride: prometheus-server
-      nodeExporter:
-        podSecurityPolicy:
-          enabled: true
-      networkPolicy:
-        enabled: true
-    grafana:
-      enabled: true
-      adminPassword: <%= context[:grafana_password] %>
-      image:
-        pullPolicy: IfNotPresent
-        repository: grafana/grafana
-        tag: <%= context[:grafana_version] || 'latest' %>
-      sidecar:
-        datasources:
-          enabled: true
-      service:
-        <%-
-          annotations = {}
-          serviceType = 'NodePort'
-          case context[:provider]
-          when 'eks'
-            annotations = {
-              'service.beta.kubernetes.io/aws-load-balancer-backend-protocol': 'http'
-            }
-            serviceType = 'LoadBalancer'
-          end
-          -%>
-        type: <%= serviceType %>
-        <%- if annotations.size > 0 -%>
-        annotations:
-        <%- annotations.each_pair do |k,v| -%>
-          '<%= k %>': '<%= v %>'
-        <%- end -%>
-        <%- end -%>
-        port: 80
-        targetPort: 3000
+    apiVersion: integreatly.org/v1alpha1
+    kind: Grafana
+    metadata:
+      name: grafana
+      namespace: <%= namespace %>
+    spec:
+      hostname: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
       ingress:
-        <%- if serviceType == 'NodePort' -%>
-        enabled: true
-        <%- else -%>
-        enabled: false
-        <%- end -%>
-        hosts:
-          - <%= context[:grafana_hostname] %>.<%= context[:domain] %>
-        path: '/*'
-      networkPolicy:
-        enabled: true
-      persistence:
-        enabled: true
-        accessModes:
-          - ReadWriteOnce
-        size: <%= context[:grafana_disk_size] %><%= context[:grafana_disk_size].to_s.end_with?('Gi') ? '' : 'Gi' %>
-      grafana.ini:
-        server:
-          domain: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
-          root_url: http://<%= context[:grafana_hostname] %>.<%= context[:domain] %>
-        paths:
-          data: /var/lib/grafana/data
-          logs: /var/log/grafana
-          plugins: /var/lib/grafana/plugins
-          provisioning: /etc/grafana/provisioning
+        annotations:
+          'service.beta.kubernetes.io/aws-load-balancer-backend-protocol': 'http'
+      service:
+        type: 'LoadBalancer'
+      <%- else %>
+      service:
+        type: 'NodePort'
+      <%- end ->
+      config:
         analytics:
           check_for_updates: true
-        log:
-          mode: console
-        grafana_net:
-          url: https://grafana.net
-        users:
-          auto_assign_org_role: Editor
-        <%- unless (context[:github_client_id] || '').empty? -%>
+        <%- if context[:github_organization] %>
         auth.github:
           allow_sign_up: true
-          <%- unless (context[:github_organization] || '').empty? %>
           allowed_organizations: <%= context[:github_organization] %>
-          <%- end %>
           api_url: https://api.github.com/user
           auth_url: https://github.com/login/oauth/authorize
           client_id: <%= context[:github_client_id] %>
@@ -118,4 +151,76 @@ data:
           enabled: true
           scopes: user,read:org
           token_url: https://github.com/login/oauth/access_token
-        <%- end -%>
+        <%- end ->
+        auth:
+          disable_signout_menu: true
+        auth.anonymous:
+          enabled: false
+        log:
+          level: info
+          mode: console
+        security:
+          admin_password: <%= context[:grafana_password] %>
+          admin_user: admin
+        paths:
+          data: /var/lib/grafana/data
+          logs: /var/log/grafana
+          plugins: /var/lib/grafana/plugins
+          provisioning: /etc/grafana/provisioning
+        server:
+          domain: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
+          root_url: http://<%= context[:grafana_hostname] %>.<%= context[:domain] %>
+      dashboardLabelSelector:
+        - matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - grafana
+
+  monitoring.yaml: |
+    ---
+    apiVersion: helm.appvia.io/v1alpha1
+    kind: Metrics
+    metadata:
+      name: metrics
+      namespace: <%= namespace %>
+    spec:
+      alertmanager:
+        enabled: true
+        alertmanagerSpec:
+          image:
+            repository: quay.io/prometheus/alertmanager
+            tag: v0.19.0
+          retention: 120h
+        ingress:
+          enabled: false
+          annotations: {}
+          hosts: []
+          labels: {}
+          paths: []
+          tls: []
+      kube-state-metrics:
+        podSecurityPolicy:
+          enabled: true
+        rbac:
+          create: true
+      kubeEtcd:
+        enabled: false
+      kubeProxy:
+        enabled: true
+      kubeScheduler:
+        enabled: false
+      kubeStateMetrics:
+        enabled: true
+      kubelet:
+        enabled: true
+      nodeExporter:
+        enabled: true
+      prometheus:
+        enabled: true
+        prometheusSpec:
+          image:
+            repository: quay.io/prometheus/prometheus
+            tag: v2.12.0
+          replicas: 2
+          retention: 10d
