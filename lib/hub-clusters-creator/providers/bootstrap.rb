@@ -130,7 +130,7 @@ module HubClustersCreator
         end
 
         info 'waiting for grafana service load balancer to be provisioned'
-        resource = client.wait(name, namespace, resource_type, version: resource_version) do |x|
+        resource = client.wait('grafana-ingress', namespace, resource_type, version: resource_version) do |x|
           x.status.loadBalancer.ingress.empty? ? false : true
         end
         host = resource.status.loadBalancer.ingress.first

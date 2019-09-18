@@ -110,8 +110,10 @@ module HubClustersCreator
 
         # @step: initialize the cluster
         begin
+          config[:credentials] = @account
           result = provision_cluster(name, config)
           c = cluster(name)
+          config.delete(:credentials)
         rescue StandardError => e
           raise InitializerError, "failed to initialize the cluster: '#{name}', error: #{e}"
         end
@@ -256,7 +258,6 @@ module HubClustersCreator
             # @check for any conflicts in peering
             (peered_networks(config[:network]) || []).each do |n|
               network_checks.each do |x|
-                puts "checking #{x}, #{n.dest_range}"
                 raise ConfigurationError, "conflicting peered network: #{n.dest_range}" if n.dest_range == x
               end
             end

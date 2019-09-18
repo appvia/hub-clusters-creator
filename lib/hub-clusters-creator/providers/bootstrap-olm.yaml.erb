@@ -14,6 +14,11 @@ data:
     kind: Namespace
     metadata:
       name: prometheus
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: brokers
 
   #
   ## Catalog
@@ -36,12 +41,35 @@ data:
   #
   <%-
     namespace = 'prometheus'
+    brokers = 'brokers'
+    broker_username = 'root'
+    broker_password = 'password'
     operators = [
       { package: 'prometheus', channel: 'beta', label: 'k8s-app=prometheus-operator', version: 'prometheusoperator.0.33.0' },
       { package: 'grafana-operator',   channel: 'alpha', label: 'app=grafana-operator', version: 'grafana-operator.v1.3.0' },
       { package: 'loki-operator', channel: 'stable', label: 'name=loki-operator', version: 'loki-operator.v0.0.1' },
       { package: 'metrics-operator', channel: 'stable', label: 'name=metrics-operator'},
     ]
+
+    storage_class = 'default'
+
+    case context[:provider]
+    when 'gke'
+      storage_class = 'standard'
+      operators.push(
+        channel: 'stable',
+        label: 'name=gcp-service-broker-operator',
+        namespace: brokers,
+        package: 'gcp-service-broker-operator',
+      )
+    when 'eks'
+      operators.push(
+        channel: 'stable',
+        label: 'name=aws-service-broker-operator',
+        namespace: brokers,
+        package: 'aws-service-broker-operator',
+      )
+    end
   -%>
   #
   ## Operator groups
@@ -56,6 +84,15 @@ data:
     spec:
       namespaces:
         - <%= namespace %>
+    ---
+    apiVersion: operators.coreos.com/v1
+    kind: OperatorGroup
+    metadata:
+      name: operator-group
+      namespace: brokers
+    spec:
+      namespaces:
+        - brokers
 
   <%- operators.each_with_index do |x,i| %>
   subscription-<%= i %>.yaml: |
@@ -64,7 +101,7 @@ data:
     kind: Subscription
     metadata:
       name: <%= x[:package] %>
-      namespace: <%= namespace %>
+    namespace: <%= x[:namespace] || namespace %>
     spec:
       name: <%= x[:package] %>
       channel: <%= x[:channel] %>
@@ -74,21 +111,6 @@ data:
       <%- if x[:version] %>
       startingCSV: <%= x[:version] %>
       <%- end %>
-  <%- end %>
-
-  <%- if context[:provider].equal?('eks') -%>
-  subscription-aws-broker-operator.yaml: |
-    apiVersion: operators.coreos.com/v1alpha1
-    kind: Subscription
-    metadata:
-      name: aws-broker-operator
-      namespace: <%= namespace %>
-    spec:
-      name: aws-broker
-      channel: stable
-      installPlanApproval: Automatic
-      source: appvia-catalog
-      sourceNamespace: olm
   <%- end %>
 
   #
@@ -129,7 +151,7 @@ data:
           token_url: https://github.com/login/oauth/access_token
         <%- end %>
         auth:
-          disable_signout_menu: true
+          disable_signout_menu: false
         auth.anonymous:
           enabled: false
         log:
@@ -188,10 +210,9 @@ data:
         persistence:
           accessModes:
             - ReadWriteOnce
-          annotations: {}
-          enabled: true
+          enabled: false
           size: 10Gi
-          storageClassName: default
+          storageClassName: <%= storage_class %>
         replicas: 1
 
       promtail:
@@ -228,14 +249,11 @@ data:
       alertmanager:
         enabled: true
         alertmanagerSpec:
-          externalUrl:
           image:
             repository: quay.io/prometheus/alertmanager
             tag: v0.19.0
           replicas: 1
-          resources: {}
           retention: 120h
-          storage: {}
       coreDns:
         enabled: true
         service:
@@ -262,3 +280,25 @@ data:
             app: prometheus
           serviceMonitorSelector:
             metrics: prometheus
+
+  <%- if context[:provider].equal?('gke') %>
+  crd-gcp-service-broker.yaml: |
+    ---
+    apiVersion: helm.appvia.io/v1alpha1
+    kind: GcpServiceBroker
+    metadata:
+      name: gcp-broker
+      namespace: <%= brokers %>
+    spec:
+      broker:
+        password: <%= broker_password %>
+        service_account_json: |
+          <%= context[:credentials] %>
+        username: <%= broker_username %>
+      image:
+        repository: gcr.io/gcp-service-broker/gcp-service-broker
+        tag: v4.3.0
+      mysql:
+        embedded: true
+      replicaCount: 1
+  <%- end %>
