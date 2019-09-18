@@ -101,16 +101,13 @@ data:
     kind: Subscription
     metadata:
       name: <%= x[:package] %>
-    namespace: <%= x[:namespace] || namespace %>
+      namespace: <%= x[:namespace] || namespace %>
     spec:
       name: <%= x[:package] %>
       channel: <%= x[:channel] %>
       installPlanApproval: Automatic
       source: appvia-catalog
       sourceNamespace: olm
-      <%- if x[:version] %>
-      startingCSV: <%= x[:version] %>
-      <%- end %>
   <%- end %>
 
   #
@@ -125,7 +122,7 @@ data:
       namespace: <%= namespace %>
     spec:
       replicas: 1
-      <%- if context[:provider].equal?('eks') %>
+      <%- if context[:provider] == 'eks' %>
       service:
         type: LoadBalancer
         annotations:
@@ -281,7 +278,7 @@ data:
           serviceMonitorSelector:
             metrics: prometheus
 
-  <%- if context[:provider].equal?('gke') %>
+  <%- if context[:provider] == 'gke' %>
   crd-gcp-service-broker.yaml: |
     ---
     apiVersion: helm.appvia.io/v1alpha1
