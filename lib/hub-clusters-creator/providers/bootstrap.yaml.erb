@@ -1,0 +1,24 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bootstrap
+  namespace: kube-system
+data:
+  repositories: |
+    # @TODO need to figure out a way to install this via the OLM - it's
+    # due the use of a genCert which is causing the OLM to cycle the
+    # deployments
+    svc-cat,https://svc-catalog-charts.storage.googleapis.com
+    <%- if context[:provider].equal?('eks') -%>
+    # installation of the aws service broker
+    aws-sb,https://awsservicebroker.s3.amazonaws.com/charts
+    <%- end -%>
+
+  charts: |
+    # helm source for the service catalog
+    svc-cat/catalog,catalog,
+    <%- if context[:provider].equal?('eks') -%>
+    # helm source for the aws service broker
+    aws-sb/aws-servicebroker,aws-sb,--set-string aws.targetaccountid=<%= context[:account_id] %> --set aws.region=<%= context[:region] %> --set aws.accesskeyid=<%= context[:access_id] %> --set aws.secretkey=<%= context[:access_key] %>
+    <%- end -%>

@@ -65,7 +65,7 @@ module HubClustersCreator
       YAML
 
       # is the name of the container image
-      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:v0.0.9'
+      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:olm'
 
       attr_accessor :client, :config, :name
 
@@ -98,6 +98,7 @@ module HubClustersCreator
 
         info 'attempting to bootstrap the cluster configuration'
         client.kubectl(generate_bootstrap_config)
+        client.kubectl(generate_bootstrap_olm_config)
         client.kubectl(generate_bootstrap_job(image))
 
         info 'waiting for the bootstrap to complete successfully'
@@ -114,8 +115,8 @@ module HubClustersCreator
         grafana_api_key = Base64.decode64(client.get(grafana_key_name, 'kube-system', 'secrets').data.key)
 
         info 'bootstrap has successfully completed'
-        name = 'loki-grafana'
-        namespace = 'metrics'
+        name = 'grafana-service'
+        namespace = 'prometheus'
 
         # @step: grab the loki service
         svc = client.get(name, namespace, 'services')
@@ -151,11 +152,18 @@ module HubClustersCreator
 
       private
 
-      # generate_bootstrap_config returns the helm values for grafana
+      # generate_bootstrap_config charts and repos
       def generate_bootstrap_config
         HubClustersCreator::Utils::Template::Render
           .new(config)
-          .render(File.read("#{__dir__}/bootstrap.erb.yaml"))
+          .render(File.read("#{__dir__}/bootstrap.yaml.erb"))
+      end
+
+      # generate_bootstrap_olm_config returns the manifests
+      def generate_bootstrap_olm_config
+        HubClustersCreator::Utils::Template::Render
+          .new(config)
+          .render(File.read("#{__dir__}/bootstrap-olm.yaml.erb"))
       end
 
       # generate_bootstrap_job is responsible for generating the bootstrap job
@@ -182,9 +190,9 @@ module HubClustersCreator
                   - name: PROVIDER
                     value: #{@provider}
                   - name: GRAFANA_NAMESPACE
-                    value: metrics
+                    value: prometheus
                   - name: GRAFANA_HOSTNAME
-                    value: loki-grafana
+                    value: grafana-service
                   - name: GRAFANA_PASSWORD
                     value: #{@config[:grafana_password]}
                   - name: GRAFANA_API_SECRET
@@ -198,10 +206,15 @@ module HubClustersCreator
                   volumeMounts:
                   - name: bundle
                     mountPath: /config/bundles
+                  - name: olm
+                    mountPath: /config/olm
                 volumes:
                 - name: bundle
                   configMap:
                     name: bootstrap
+                - name: olm
+                  configMap:
+                    name: bootstrap-olm
         YAML
         template
       end

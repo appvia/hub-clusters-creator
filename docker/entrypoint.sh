@@ -22,39 +22,155 @@ failed()   { log "[$(date)][fail] $@";   }
 error()    { log "[$(date)][error] $@";  }
 
 CONFIG_DIR="${CONFIG_DIR:-"/config"}"
+OLM_MANIFESTS_URL="https://appvia-hub-olm-artifiacts-eu-west-2.s3.eu-west-2.amazonaws.com/0.11.0"
 GITHUB_RAW_URL="https://raw.githubusercontent.com"
 HELM_DIR="${CONFIG_DIR}/bundles"
 HELM_REPOS="${HELM_DIR}/repositories"
 HELM_BUNDLES="${HELM_DIR}/charts"
 KUBE_DIR="${CONFIG_DIR}/manifests"
+OLM_MANIFESTS="${CONFIG_DIR}/olm"
+
+wait-on-pods() {
+  namespace=$1
+  labels=$2
+  delay=${3:-5}
+  info "waiting to an initial ${delay} seconds before checking"
+  sleep ${delay}
+
+  info "checking for running in namespace: ${namespace}, labels:${labels}"
+  for ((i=0; i<24; i++)); do
+    if kubectl -n ${namespace} get pods -l ${labels} --no-headers | grep "1/1.*Running"; then
+      return 0
+    fi
+    info "no pods currently running or ready yet, sleeping for 5 seconds"
+    sleep 5
+  done
+
+  return 1
+}
 
 provision-olm() {
   info "provisioning the operator lifecycle manager, version: ${OLM_VERSION}"
-  for file in {crds,olm}.yaml; do
-    if [[ ! -f "/tmp/${file}" ]]; then
-      file_link="${GITHUB_RAW_URL}/operator-framework/operator-lifecycle-manager/${OLM_VERSION}/deploy/upstream/quickstart/${file}"
-      info "downloading the manifest file: ${file_link}"
-      if ! curl -sL "${file_link}" -o /tmp/${file}; then
-        error "failed to downloading the manifest: ${file_link}"
-        exit 1
-      fi
-    fi
-    if ! kubectl apply -f /tmp/${file}; then
-      error "failed to provision olm manifest: ${file}"
-      exit 1
+  for manifest in olm.crd olm; do
+    url="${OLM_MANIFESTS_URL}/${manifest}.yaml"
+    info "using the OLM manifest: ${url}"
+    if ! kubectl apply -f ${url}; then
+      error "failed to apply the manifest: ${url}"
+      return 1
     fi
   done
 
-  info "operator lifecycle manager should be provisioning"
+  info "ensuring the olm olm-operator is running"
+  if ! wait-on-pods "olm" "app=olm-operator"; then
+    error "the olm operator has not come up, exitting"
+    return 1
+  fi
+
+  info "ensuring the olm catalog-operator is running"
+  if ! wait-on-pods "olm" "app=catalog-operator"; then
+    error "the catalog operator has not come up, exitting"
+    return 1
+  fi
+
+  info "ensuring the olm operatoriohub is running"
+  if ! wait-on-pods "olm" "olm.catalogSource=operatorhubio-catalog"; then
+    error "the catalog operator has not come up, exitting"
+    return 1
+  fi
+
+  info "ensuring the olm packageserver is running"
+  if ! wait-on-pods "olm" "app=packageserver"; then
+    error "the catalog operator has not come up, exitting"
+    return 1
+  fi
+
+  sleep 10
 }
 
+provision-olm-framework() {
+  info "provisioning the operator framework catalogs"
+  for i in ${OLM_MANIFESTS}/catalog*.yaml; do
+    # wait for the catalog to come up
+    name=$(awk '/name:/ { print $2 }' ${i} | sed -n 1p)
+    if [[ -z "${name}" ]]; then
+      error "failed to find the name of the catalog in file: ${i}"
+      return 1
+    fi
+
+    info "installing the catalog: ${i}"
+    if ! kubectl apply -f ${i}; then
+      error "failed to install the catalog: ${i}"
+      return 1
+    fi
+    if ! wait-on-pods "olm" "olm.catalogSource=${name}"; then
+      error "failed to bring up the catalog: ${1}"
+      return 1
+    fi
+  done
+
+  # give some time for the catalog to populate
+  sleep 10
+
+  info "provisioning the namespaces"
+  for i in ${OLM_MANIFESTS}/namespace*.yaml; do
+    info "creating the namespace from file: ${i}"
+    if ! kubectl apply -f ${i}; then
+      error "failed to create the namespace"
+      return 1
+    fi
+  done
+
+  info "provisioing the operator groups in the namespaces"
+  for i in ${OLM_MANIFESTS}/operatorgroups*.yaml; do
+    info "creating the operatorgroups from: ${i}"
+    if ! kubectl apply -f ${i}; then
+      error "failed to create the operatorgroups"
+      return 1
+    fi
+  done
+
+  info "provisioning the operator subscriptions"
+  for i in ${OLM_MANIFESTS}/subscription-*.yaml; do
+    name=$(awk '/name:/ { print $2 }' ${i} | sed -n 1p)
+    namespace=$(awk '/namespace:/ { print $2 }' ${i})
+    selector=$(awk '/operator_selector:/ { print $3 }' ${i})
+    [[ -z "${selector}"  ]] && { error "selector not found in file: ${i}"; return 1; }
+    [[ -z "${namespace}" ]] && { error "namespace not found in file: ${i}"; return 1; }
+
+    info "creating the operator subscription from: ${i}"
+    if ! kubectl apply -f ${i}; then
+      error "failed to create the subscription"
+      return 1
+    fi
+
+    info "waiting for the operator to start"
+    if ! wait-on-pods ${namespace} "${selector}"; then
+      error "failed to start the operator: ${name}, namespace: ${namespace}"
+      return 1
+    fi
+
+    sleep 5
+  done
+
+  info "provisioning the crd packages"
+  for i in ${OLM_MANIFESTS}/crd-*.yaml; do
+    info "attempting to create crd from file: ${i}"
+    if ! kubectl apply -f ${i}; then
+      error "failed to create the crd"
+      return 1
+    fi
+    sleep 3
+  done
+
+  info "successfully provisioned the olm framework"
+}
 
 provision-grafana() {
   # @step: we need to check if the api already get exists
   kubectl -n ${GRAFANA_API_SECRET_NAMESPACE} get secret ${GRAFANA_API_SECRET} && return 0
 
   local HOSTNAME="${GRAFANA_HOSTNAME}.${GRAFANA_NAMESPACE}.svc.cluster.local"
-  local URL="${GRAFANA_SCHEMA}://admin:${GRAFANA_PASSWORD}@${HOSTNAME}"
+  local URL="${GRAFANA_SCHEMA}://admin:${GRAFANA_PASSWORD}@${HOSTNAME}:3000"
   local API_KEY_FILE="/tmp/key.json"
 
   # @step: provison the api for grafana
@@ -63,7 +179,7 @@ provision-grafana() {
   { "name": "api", "role": "Admin", "secondsToLive": 0 }
 EOF
   for ((i=0; i<30; i++)) do
-    info "attempting to provision a api key for grafana"
+    info "attempting to provision a api key for grafana: ${URL}"
     if curl -s -X POST -H "Content-Type: application/json" \
       --data @/tmp/params.json \
       ${URL}/api/auth/keys > ${API_KEY_FILE}; then
@@ -154,7 +270,12 @@ fi
 
 if ! provision-olm; then
   error "failed to provision the olm"
-  exit
+  exit 1
+fi
+
+if ! provision-olm-framework; then
+  error "failed to provision the olm framework"
+  exit 1
 fi
 
 if ! provision-grafana; then
@@ -172,4 +293,3 @@ else
     sleep 5
   done
 fi
-

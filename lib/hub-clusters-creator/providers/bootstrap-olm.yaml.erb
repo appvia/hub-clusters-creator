@@ -2,26 +2,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: bootstrap
+  name: bootstrap-olm
   namespace: kube-system
 data:
-  repositories: |
-    # @TODO need to figure out a way to install this via the OLM - it's
-    # due the use of a genCert which is causing the OLM to cycle the
-    # deployments
-    svc-cat,https://svc-catalog-charts.storage.googleapis.com
-    # installation of the aws service broker
-    aws-sb,https://awsservicebroker.s3.amazonaws.com/charts
-    <%- end -%>
-
-  charts: |
-    # helm source for the service catalog
-    svc-cat/catalog,catalog,
-    <%- if context[:provider].equal?('eks') -%>
-    # helm source for the aws service broker
-    aws-sb/aws-servicebroker,aws-sb,--set-string aws.targetaccountid=<%= context[:account_id] %> --set aws.region=<%= context[:region] %> --set aws.accesskeyid=<%= context[:access_id] %> --set aws.secretkey=<%= context[:access_key] %>
-    <%- end -%>
-
   #
   ## Metrics namespace
   #
@@ -31,11 +14,6 @@ data:
     kind: Namespace
     metadata:
       name: prometheus
-    ---
-    apiVersion: v1
-    kind: Namespace
-    metadata:
-      name: brokers
 
   #
   ## Catalog
@@ -54,6 +32,18 @@ data:
       sourceType: grpc
 
   #
+  ## Operator subscriptions
+  #
+  <%-
+    namespace = 'prometheus'
+    operators = [
+      { package: 'prometheus', channel: 'beta', label: 'k8s-app=prometheus-operator', version: 'prometheusoperator.0.33.0' },
+      { package: 'grafana-operator',   channel: 'alpha', label: 'app=grafana-operator', version: 'grafana-operator.v1.3.0' },
+      { package: 'loki-operator', channel: 'stable', label: 'name=loki-operator', version: 'loki-operator.v0.0.1' },
+      { package: 'metrics-operator', channel: 'stable', label: 'name=metrics-operator'},
+    ]
+  -%>
+  #
   ## Operator groups
   #
   operatorgroups.yaml: |
@@ -66,27 +56,10 @@ data:
     spec:
       namespaces:
         - <%= namespace %>
-    ---
-    apiVersion: operators.coreos.com/v1
-    kind: OperatorGroup
-    metadata:
-      name: operator-group
-      namespace: broker
 
-  #
-  ## Operator subscriptions
-  #
-  <%-
-    namespace = "prometheus"
-    operators = [
-      { package: 'prometheusoperator', channel: 'beta',  version: '0.33.0' },
-      { package: 'grafana-operator',   channel: 'alpha', version: 'v1.3.0' },
-      { package: 'loki-operator', channel: 'stable', version: 'v0.0.1' },
-      { package: 'metrics-operator', channel: 'stable', version: 'v0.0.2' },
-    ]
-  -%>
-  <%- operators.each do |x| %>
-  <%= x[:package] %>.yaml: |
+  <%- operators.each_with_index do |x,i| %>
+  subscription-<%= i %>.yaml: |
+    # operator_selector: <%= x[:label] %>
     apiVersion: operators.coreos.com/v1alpha1
     kind: Subscription
     metadata:
@@ -98,11 +71,13 @@ data:
       installPlanApproval: Automatic
       source: appvia-catalog
       sourceNamespace: olm
-      startingCSV: <%= x[:package].<%= x[:version] %>
+      <%- if x[:version] %>
+      startingCSV: <%= x[:version] %>
+      <%- end %>
   <%- end %>
 
   <%- if context[:provider].equal?('eks') -%>
-  aws-broker-operator.yaml: |
+  subscription-aws-broker-operator.yaml: |
     apiVersion: operators.coreos.com/v1alpha1
     kind: Subscription
     metadata:
@@ -114,29 +89,30 @@ data:
       installPlanApproval: Automatic
       source: appvia-catalog
       sourceNamespace: olm
-      startingCSV: aws-broker-operator.v0.0.1
   <%- end %>
 
   #
   ## Grafana
   #
-  grafana.yaml: |
+  crd-grafana.yaml: |
+    ---
     apiVersion: integreatly.org/v1alpha1
     kind: Grafana
     metadata:
       name: grafana
       namespace: <%= namespace %>
     spec:
-      hostname: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
-      ingress:
+      replicas: 1
+      <%- if context[:provider].equal?('eks') %>
+      service:
+        type: LoadBalancer
         annotations:
           'service.beta.kubernetes.io/aws-load-balancer-backend-protocol': 'http'
-      service:
-        type: 'LoadBalancer'
       <%- else %>
+      hostname: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
       service:
-        type: 'NodePort'
-      <%- end ->
+        type: NodePort
+      <%- end %>
       config:
         analytics:
           check_for_updates: true
@@ -151,7 +127,7 @@ data:
           enabled: true
           scopes: user,read:org
           token_url: https://github.com/login/oauth/access_token
-        <%- end ->
+        <%- end %>
         auth:
           disable_signout_menu: true
         auth.anonymous:
@@ -175,9 +151,73 @@ data:
           - key: app
             operator: In
             values:
-            - grafana
+              - grafana
+    ---
+    apiVersion: integreatly.org/v1alpha1
+    kind: GrafanaDataSource
+    metadata:
+      name: prometheus
+      namespace: <%= namespace %>
+    spec:
+      name: cluster.yaml
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://prometheus-operated:9090
+          isDefault: true
+          version: 1
+          editable: false
 
-  monitoring.yaml: |
+  #
+  ## Logging
+  #
+  crd-logging.yaml: |
+    ---
+    apiVersion: helm.appvia.io/v1alpha1
+    kind: Loki
+    metadata:
+      name: loki
+      namespace: <%= namespace %>
+    spec:
+      loki:
+        enabled: true
+        image:
+          repository: grafana/loki
+          tag: v0.3.0
+        persistence:
+          accessModes:
+            - ReadWriteOnce
+          annotations: {}
+          enabled: true
+          size: 10Gi
+          storageClassName: default
+        replicas: 1
+
+      promtail:
+        enabled: true
+        image:
+          pullPolicy: IfNotPresent
+          repository: grafana/promtail
+          tag: v0.3.0
+    ---
+    apiVersion: integreatly.org/v1alpha1
+    kind: GrafanaDataSource
+    metadata:
+      name: loki
+      namespace: <%= namespace %>
+    spec:
+      datasources:
+        - access: proxy
+          editable: false
+          isDefault: false
+          name: loki
+          type: loki
+          url: http://loki:3100
+          version: 1
+      name: logging.yaml
+
+  crd-monitoring.yaml: |
     ---
     apiVersion: helm.appvia.io/v1alpha1
     kind: Metrics
@@ -188,28 +228,23 @@ data:
       alertmanager:
         enabled: true
         alertmanagerSpec:
+          externalUrl:
           image:
             repository: quay.io/prometheus/alertmanager
             tag: v0.19.0
+          replicas: 1
+          resources: {}
           retention: 120h
-        ingress:
-          enabled: false
-          annotations: {}
-          hosts: []
-          labels: {}
-          paths: []
-          tls: []
-      kube-state-metrics:
-        podSecurityPolicy:
-          enabled: true
-        rbac:
-          create: true
-      kubeEtcd:
-        enabled: false
+          storage: {}
+      coreDns:
+        enabled: true
+        service:
+          port: 10054
+          targetPort: 10054
+          selector:
+            k8s-app: kube-dns
       kubeProxy:
         enabled: true
-      kubeScheduler:
-        enabled: false
       kubeStateMetrics:
         enabled: true
       kubelet:
@@ -217,10 +252,13 @@ data:
       nodeExporter:
         enabled: true
       prometheus:
-        enabled: true
         prometheusSpec:
           image:
             repository: quay.io/prometheus/prometheus
             tag: v2.12.0
           replicas: 2
           retention: 10d
+          ruleSelector:
+            app: prometheus
+          serviceMonitorSelector:
+            metrics: prometheus
