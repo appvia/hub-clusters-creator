@@ -120,13 +120,14 @@ data:
     kind: Mariadb
     metadata:
       name: grafana-db
+      namespace: <%= namespace %>
     spec:
       db:
         forcePassword: false
         name: grafana
       master:
         persistence:
-          enabled: true
+          enabled: false
           size: 10Gi
       rootUser:
         forcePassword: true
@@ -147,7 +148,7 @@ data:
       name: grafana
       namespace: <%= namespace %>
     spec:
-      replicas: 2
+      replicas: 3
       <%- if context[:provider] == 'eks' %>
       service:
         type: LoadBalancer
