@@ -189,17 +189,20 @@ data:
         log:
           level: info
           mode: console
-        security:
-          admin_password: <%= context[:grafana_password] %>
-          admin_user: admin
         paths:
           data: /var/lib/grafana/data
           logs: /var/log/grafana
           plugins: /var/lib/grafana/plugins
           provisioning: /etc/grafana/provisioning
+        security:
+          admin_password: <%= context[:grafana_password] %>
+          admin_user: admin
         server:
           domain: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
+          enable_gzip: true
           root_url: http://<%= context[:grafana_hostname] %>.<%= context[:domain] %>
+        users:
+          auto_assign_org_role: Editor
       dashboardLabelSelector:
         - matchExpressions:
           - key: app
