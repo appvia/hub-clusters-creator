@@ -328,6 +328,34 @@ data:
   crd-gcp-service-broker.yaml: |
     ---
     apiVersion: helm.appvia.io/v1alpha1
+    kind: Mariadb
+    metadata:
+      name: gcp-broker-db
+      namespace: <%= brokers %>
+    spec:
+      db:
+        forcePassword: false
+        name: <%= context[:broker_db_name] %>
+      master:
+        persistence:
+          enabled: true
+          size: 4Gi
+      rootUser:
+        forcePassword: true
+        password: <%= context[:broker_db_password] %>
+      fullnameOverride: gcp-broker-db
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: false
+      replication:
+        enabled: false
+      serviceAccount:
+        create: true
+      slave:
+        replicas: 0
+    ---
+    apiVersion: helm.appvia.io/v1alpha1
     kind: GcpServiceBroker
     metadata:
       name: gcp-broker
@@ -341,6 +369,10 @@ data:
         repository: gcr.io/gcp-service-broker/gcp-service-broker
         tag: v4.3.0
       mysql:
-        embedded: true
+        embedded: false
+        host: gcp-broker-db
+        mysqlDatabase: <%= context[:broker_db_name] %>
+        mysqlPassword: <%= context[:broker_db_password] %>
+        mysqlUser: root
       replicaCount: 1
   <%- end %>

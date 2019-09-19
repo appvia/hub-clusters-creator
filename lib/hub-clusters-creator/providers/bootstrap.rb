@@ -98,6 +98,10 @@ module HubClustersCreator
 
         config[:grafana_db_password] = (0...12).map { chars[rand(chars.length)] }.join
 
+        # related to the cloud service broker
+        config[:broker_db_password] = (0...12).map { chars[rand(chars.length)] }.join
+        config[:broker_db_name] = 'broker'
+
         info 'attempting to bootstrap the cluster configuration'
         client.kubectl(generate_bootstrap_config)
         client.kubectl(generate_bootstrap_olm_config)
