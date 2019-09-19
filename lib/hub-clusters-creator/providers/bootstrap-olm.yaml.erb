@@ -49,6 +49,7 @@ data:
       { package: 'grafana-operator',   channel: 'alpha', label: 'app=grafana-operator', version: 'grafana-operator.v1.3.0' },
       { package: 'loki-operator', channel: 'stable', label: 'name=loki-operator', version: 'loki-operator.v0.0.1' },
       { package: 'metrics-operator', channel: 'stable', label: 'name=metrics-operator'},
+      { package: 'mariadb-operator', channel: 'stable', label: 'name=mariadb-operator'},
     ]
 
     storage_class = 'default'
@@ -115,13 +116,38 @@ data:
   #
   crd-grafana.yaml: |
     ---
+    apiVersion: helm.appvia.io/v1alpha1
+    kind: Mariadb
+    metadata:
+      name: grafana-db
+    spec:
+      db:
+        forcePassword: false
+        name: grafana
+      master:
+        persistence:
+          enabled: true
+          size: 10Gi
+      rootUser:
+        forcePassword: true
+        password: <%= context[:grafana_db_password] %>
+      fullnameOverride: grafana-db
+      metrics:
+        enabled: false
+      replication:
+        enabled: false
+      serviceAccount:
+        create: true
+      slave:
+        replicas: 0
+    ---
     apiVersion: integreatly.org/v1alpha1
     kind: Grafana
     metadata:
       name: grafana
       namespace: <%= namespace %>
     spec:
-      replicas: 1
+      replicas: 2
       <%- if context[:provider] == 'eks' %>
       service:
         type: LoadBalancer
@@ -151,6 +177,12 @@ data:
           disable_signout_menu: false
         auth.anonymous:
           enabled: false
+        database:
+          host: grafana-db
+          name: grafana
+          password: <%= context[:grafana_db_password] %>
+          type: mysql
+          user: root
         log:
           level: info
           mode: console
@@ -289,8 +321,7 @@ data:
     spec:
       broker:
         password: <%= broker_password %>
-        service_account_json: |
-          <%= context[:credentials] %>
+        service_account_json: '<%= JSON.parse(context[:credentials]) %>'
         username: <%= broker_username %>
       image:
         repository: gcr.io/gcp-service-broker/gcp-service-broker
