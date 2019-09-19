@@ -27,6 +27,8 @@ data:
             enabled: true
             size: 4Gi
     controllerManager:
+      annotations:
+        prometheus.io/scheme: https
       brokerRelistInterval: 20m
       enablePrometheusScrape: true
       resyncInterval: 5m
