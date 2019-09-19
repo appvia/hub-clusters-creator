@@ -162,6 +162,12 @@ data:
       config:
         analytics:
           check_for_updates: true
+        auth:
+          disable_signout_menu: false
+        auth.basic:
+          enabled: true
+        auth.anonymous:
+          enabled: false
         <%- if context[:github_organization] %>
         auth.github:
           allow_sign_up: true
@@ -174,10 +180,6 @@ data:
           scopes: user,read:org
           token_url: https://github.com/login/oauth/access_token
         <%- end %>
-        auth:
-          disable_signout_menu: false
-        auth.anonymous:
-          enabled: false
         database:
           host: grafana-db
           name: grafana
@@ -244,6 +246,10 @@ data:
           size: 10Gi
           storageClassName: <%= storage_class %>
         replicas: 1
+        serviceMonitor:
+          enabled: true
+          additionalLabels:
+            metrics: prometheus
 
       promtail:
         enabled: true
@@ -251,6 +257,9 @@ data:
           pullPolicy: IfNotPresent
           repository: grafana/promtail
           tag: v0.3.0
+        serviceMonitor:
+          additionalLabels:
+            metrics: prometheus
     ---
     apiVersion: integreatly.org/v1alpha1
     kind: GrafanaDataSource
@@ -310,6 +319,10 @@ data:
             app: prometheus
           serviceMonitorSelector:
             metrics: prometheus
+      kube-state-metrics:
+        fullnameOverride: kube-state-metrics
+      prometheus-node-exporter:
+        fullnameOverride: node-exporter
 
   <%- if context[:provider] == 'gke' %>
   crd-gcp-service-broker.yaml: |
