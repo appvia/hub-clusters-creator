@@ -13,4 +13,20 @@ data:
 
   charts: |
     # helm source for the service catalog
-    svc-cat/catalog,catalog,
+    svc-cat/catalog,catalog,--values /config/bundles/catalog.yaml
+
+  # The values supplied to the service-catalog
+  catalog.yaml: |
+    imagePullPolicy: IfNotPresent
+    apiserver:
+      storage:
+        etcd:
+          image: quay.io/coreos/etcd:latest
+          imagePullPolicy: IfNotPresent
+          persistence:
+            enabled: true
+            size: 4Gi
+    controllerManager:
+      brokerRelistInterval: 20m
+      enablePrometheusScrape: true
+      resyncInterval: 5m
