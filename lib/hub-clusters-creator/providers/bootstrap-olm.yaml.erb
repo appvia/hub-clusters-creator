@@ -134,7 +134,9 @@ data:
         password: <%= context[:grafana_db_password] %>
       fullnameOverride: grafana-db
       metrics:
-        enabled: false
+        enabled: true
+        serviceMonitor:
+          enabled: false
       replication:
         enabled: false
       serviceAccount:
