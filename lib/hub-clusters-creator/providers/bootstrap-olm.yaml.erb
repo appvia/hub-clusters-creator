@@ -322,7 +322,7 @@ data:
     spec:
       broker:
         password: <%= broker_password %>
-        service_account_json: '<%= JSON.parse(context[:credentials]) %>'
+        service_account_json: '<%= JSON.parse(context[:credentials]).to_json %>'
         username: <%= broker_username %>
       image:
         repository: gcr.io/gcp-service-broker/gcp-service-broker
