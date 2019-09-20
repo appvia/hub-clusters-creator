@@ -150,7 +150,7 @@ data:
       name: grafana
       namespace: <%= namespace %>
     spec:
-      replicas: 3
+      initialReplicas: 3
       <%- if context[:provider] == 'eks' %>
       service:
         type: LoadBalancer
