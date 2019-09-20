@@ -329,6 +329,30 @@ data:
       prometheus-node-exporter:
         fullnameOverride: node-exporter
 
+  #
+  ## Cloud Service Brokers
+  #
+
+  <%- if context[:provider] == 'eks' %>
+  crd-aws-service-broker.yaml: |
+    apiVersion: helm.appvia.io/v1alpha1
+    kind: AwsServicebroker
+    metadata:
+      name: aws-broker
+      namespace: <%= brokers %>
+    spec:
+      image: awsservicebroker/aws-servicebroker:beta
+      aws:
+        region: <%= context[:credentials][:region] %>
+        bucket: awsservicebroker
+        key: templates/latest
+        s3region: us-east-1
+        tablename: awssb
+        accesskeyid: <%= context[:credentials][:access_id] %>
+        secretkey: <%= context[:credentials][:access_key] %>
+        targetaccountid: '<%= context[:credentials][:account_id] %>'
+  <%- end %>
+
   <%- if context[:provider] == 'gke' %>
   crd-gcp-service-broker.yaml: |
     ---

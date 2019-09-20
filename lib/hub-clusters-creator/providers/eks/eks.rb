@@ -92,12 +92,15 @@ module HubClustersCreator
 
         # @step: provision the cluster
         info 'bootstraping the eks cluster'
-        config[:account_id] = @account_id
-        config[:access_id] = @access_id
-        config[:access_key] = @access_key
-        config[:region] = @region
+        config[:credentials] = {
+          access_id: @access_id,
+          access_key: @access_key,
+          account_id: @account_id,
+          region: @region
+        }
         result = HubClustersCreator::Providers::Bootstrap.new(name, 'eks', client, config).bootstrap
         address = result[:grafana][:hostname]
+        config.delete(:credentials)
 
         info 'adding the dns entry for the grafana dashboard'
         dns(config[:grafana_hostname], address, config[:domain])
