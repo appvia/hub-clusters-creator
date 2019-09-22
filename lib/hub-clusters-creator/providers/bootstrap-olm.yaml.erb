@@ -176,7 +176,7 @@ data:
           allowed_organizations: <%= context[:github_organization] %>
           api_url: https://api.github.com/user
           auth_url: https://github.com/login/oauth/authorize
-          client_id: <%= context[:github_client_id] %>
+          client_id: '<%= context[:github_client_id] %>'
           client_secret: <%= context[:github_client_secret] %>
           enabled: true
           scopes: user,read:org
@@ -343,13 +343,13 @@ data:
     spec:
       image: awsservicebroker/aws-servicebroker:beta
       aws:
-        region: <%= context[:credentials][:region] %>
+        accesskeyid: <%= context[:credentials][:access_id] %>
         bucket: awsservicebroker
         key: templates/latest
+        region: <%= context[:credentials][:region] %>
         s3region: us-east-1
-        tablename: awssb
-        accesskeyid: <%= context[:credentials][:access_id] %>
         secretkey: <%= context[:credentials][:access_key] %>
+        tablename: awssb
         targetaccountid: '<%= context[:credentials][:account_id] %>'
   <%- end %>
 
