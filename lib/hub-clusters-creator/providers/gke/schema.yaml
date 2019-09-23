@@ -511,6 +511,18 @@ properties:
       - false
       - true
 
+  enable_service_broker:
+    $id: '#/properties/enable_service_broker'
+    tag: advanced
+    type: boolean
+    title: Enabled the GKE Service Broker
+    default: true
+    description: >
+      Indicates if we should install the GKE service broker
+    examples:
+      - false
+      - true
+
   master_ipv4_cidr_block:
     $id: '#/properties/master_ipv4_cidr_block'
     tag: default
