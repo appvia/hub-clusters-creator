@@ -1,0 +1,49 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bootstrap
+  namespace: kube-system
+spec:
+  backoffLimit: 20
+  template:
+    spec:
+      serviceAccountName: sysadmin
+      restartPolicy: OnFailure
+      containers:
+      - name: bootstrap
+        image: <%= context[:bootstrap_image] %>
+        imagePullPolicy: Always
+        env:
+        - name: CONFIG_DIR
+          value: /config
+        - name: ENABLE_ISTIO
+          value: '<%= context[:enable_istio] %>'
+        - name: PROVIDER
+          value: <%= context[:provider] %>
+        - name: GRAFANA_NAMESPACE
+          value: prometheus
+        - name: GRAFANA_HOSTNAME
+          value: grafana-service
+        - name: GRAFANA_PASSWORD
+          value: <%= context[:grafana_password] %>
+        - name: GRAFANA_API_SECRET
+          value: grafana-api-key
+        - name: GRAFANA_API_SECRET_NAMESPACE
+          value: kube-system
+        - name: GRAFANA_SCHEMA
+          value: http
+        - name: OLM_VERSION
+          value: '<%= context[:olm_version] %>'
+        volumeMounts:
+        - name: bundle
+          mountPath: /config/bundles
+        - name: olm
+          mountPath: /config/olm
+      volumes:
+      - name: bundle
+        configMap:
+          name: bootstrap
+      - name: olm
+        configMap:
+          name: bootstrap-olm

@@ -49,6 +49,24 @@ wait-on-pods() {
   return 1
 }
 
+provision-gke-istio() {
+  info "provisioning istio on the gke platform"
+  local namespace="istio-system"
+  (
+    wait-on-pods ${namespace} 'istio=citadel' &&
+    wait-on-pods ${namespace} 'istio=galley' &&
+    wait-on-pods ${namespace} 'istio=ingressgateway' &&
+    wait-on-pods ${namespace} 'istio=pilot' &&
+    wait-on-pods ${namespace} 'istio=mixer' &&
+    wait-on-pods ${namespace} 'istio=sidecar-injector' &&
+    wait-on-pods ${namespace} 'app=telemetry'
+  ) || {
+    error "istio has not been provisioned correctly";
+    return 1;
+  }
+  return 0
+}
+
 provision-olm() {
   info "provisioning the operator lifecycle manager, version: ${OLM_VERSION}"
   for manifest in olm.crd olm; do
@@ -258,6 +276,14 @@ deploy-bundles() {
   fi
 }
 
+if [[ "${ENABLE_ISTIO}" == "true" ]]; then
+  if [[ "${PROVIDER}" == "gke" ]]; then
+    if ! provision-gke-istio; then
+      error "failed to deploy the kubernetes manifests";
+      exit 1
+    fi
+  fi
+fi
 if ! deploy-manifests; then
   error "failed to deploy the kubernetes manifests";
   exit 1

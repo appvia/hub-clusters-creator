@@ -174,55 +174,10 @@ module HubClustersCreator
 
       # generate_bootstrap_job is responsible for generating the bootstrap job
       def generate_bootstrap_job(image)
-        template = <<-YAML
-          apiVersion: batch/v1
-          kind: Job
-          metadata:
-            name: bootstrap
-            namespace: kube-system
-          spec:
-            backoffLimit: 20
-            template:
-              spec:
-                serviceAccountName: sysadmin
-                restartPolicy: OnFailure
-                containers:
-                - name: bootstrap
-                  image: #{image}
-                  imagePullPolicy: Always
-                  env:
-                  - name: CONFIG_DIR
-                    value: /config
-                  - name: PROVIDER
-                    value: #{@provider}
-                  - name: GRAFANA_NAMESPACE
-                    value: prometheus
-                  - name: GRAFANA_HOSTNAME
-                    value: grafana-service
-                  - name: GRAFANA_PASSWORD
-                    value: #{@config[:grafana_password]}
-                  - name: GRAFANA_API_SECRET
-                    value: grafana-api-key
-                  - name: GRAFANA_API_SECRET_NAMESPACE
-                    value: kube-system
-                  - name: GRAFANA_SCHEMA
-                    value: http
-                  - name: OLM_VERSION
-                    value: '#{@config[:olm_version]}'
-                  volumeMounts:
-                  - name: bundle
-                    mountPath: /config/bundles
-                  - name: olm
-                    mountPath: /config/olm
-                volumes:
-                - name: bundle
-                  configMap:
-                    name: bootstrap
-                - name: olm
-                  configMap:
-                    name: bootstrap-olm
-        YAML
-        template
+        config[:bootstrap_image] = image
+        HubClustersCreator::Utils::Template::Render
+          .new(config)
+          .render(File.read("#{__dir__}/bootstrap-job.yaml.erb"))
       end
     end
     # rubocop:enable Metrics/ClassLength
