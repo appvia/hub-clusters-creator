@@ -39,7 +39,7 @@ wait-on-pods() {
 
   info "checking for running in namespace: ${namespace}, labels:${labels}"
   for ((i=0; i<24; i++)); do
-    if kubectl -n ${namespace} get pods -l ${labels} --no-headers | grep "1/1.*Running"; then
+    if kubectl -n ${namespace} get pods -l ${labels} --no-headers | egrep "[1-9]/[1-9].*Running"; then
       return 0
     fi
     info "no pods currently running or ready yet, sleeping for 5 seconds"
