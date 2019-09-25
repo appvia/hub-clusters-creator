@@ -159,7 +159,8 @@ data:
         annotations:
           'service.beta.kubernetes.io/aws-load-balancer-backend-protocol': 'http'
       <%- else %>
-      hostname: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
+      ingress:
+        hostname: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
       service:
         type: NodePort
       <%- end %>
