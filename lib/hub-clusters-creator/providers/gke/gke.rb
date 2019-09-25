@@ -276,8 +276,8 @@ module HubClustersCreator
       # default_cloud_nat returns a default cloud nat configuration
       def default_cloud_nat(name = 'cloud-nat')
         [
-          Google::Apis::ComputeV1::RouterNat.new(
-            log_config: Google::Apis::ComputeV1::RouterNatLogConfig.new(enable: false, filter: 'ALL'),
+          Google::Apis::ComputeBeta::RouterNat.new(
+            log_config: Google::Apis::ComputeBeta::RouterNatLogConfig.new(enable: false, filter: 'ALL'),
             name: name,
             nat_ip_allocate_option: 'AUTO_ONLY',
             source_subnetwork_ip_ranges_to_nat: 'ALL_SUBNETWORKS_ALL_IP_RANGES'
