@@ -34,6 +34,7 @@ creator = HubClustersCreator.new(
 puts creator.provision(
   description: 'just a test',
   domain: 'gkelearning.appvia.io',
+  enable_istio: true,
   github_client_id: ENV['GITHUB_CLIENT_ID'],
   github_client_secret: ENV['GITHUB_CLIENT_SECRET'],
   github_organization: ENV['GITHUB_ORG'],
@@ -42,5 +43,5 @@ puts creator.provision(
   machine_type: 'n1-standard-1',
   name: 'test',
   size: 1,
-  version: '1.14.3-gke.11'
+  version: '1.14.6-gke.1'
 )
