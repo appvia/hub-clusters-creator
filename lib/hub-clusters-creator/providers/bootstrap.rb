@@ -65,7 +65,7 @@ module HubClustersCreator
       YAML
 
       # is the name of the container image
-      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:v0.0.9'
+      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:olm'
 
       attr_accessor :client, :config, :name
 
@@ -96,8 +96,15 @@ module HubClustersCreator
           config[:grafana_password] = (0...12).map { chars[rand(chars.length)] }.join
         end
 
+        config[:grafana_db_password] = (0...12).map { chars[rand(chars.length)] }.join
+
+        # related to the cloud service broker
+        config[:broker_db_password] = (0...12).map { chars[rand(chars.length)] }.join
+        config[:broker_db_name] = 'broker'
+
         info 'attempting to bootstrap the cluster configuration'
         client.kubectl(generate_bootstrap_config)
+        client.kubectl(generate_bootstrap_olm_config)
         client.kubectl(generate_bootstrap_job(image))
 
         info 'waiting for the bootstrap to complete successfully'
@@ -114,8 +121,8 @@ module HubClustersCreator
         grafana_api_key = Base64.decode64(client.get(grafana_key_name, 'kube-system', 'secrets').data.key)
 
         info 'bootstrap has successfully completed'
-        name = 'loki-grafana'
-        namespace = 'metrics'
+        name = 'grafana-service'
+        namespace = 'prometheus'
 
         # @step: grab the loki service
         svc = client.get(name, namespace, 'services')
@@ -129,7 +136,7 @@ module HubClustersCreator
         end
 
         info 'waiting for grafana service load balancer to be provisioned'
-        resource = client.wait(name, namespace, resource_type, version: resource_version) do |x|
+        resource = client.wait('grafana-ingress', namespace, resource_type, version: resource_version) do |x|
           x.status.loadBalancer.ingress.empty? ? false : true
         end
         host = resource.status.loadBalancer.ingress.first
@@ -151,59 +158,26 @@ module HubClustersCreator
 
       private
 
-      # generate_bootstrap_config returns the helm values for grafana
+      # generate_bootstrap_config charts and repos
       def generate_bootstrap_config
         HubClustersCreator::Utils::Template::Render
           .new(config)
-          .render(File.read("#{__dir__}/bootstrap.erb.yaml"))
+          .render(File.read("#{__dir__}/bootstrap.yaml.erb"))
+      end
+
+      # generate_bootstrap_olm_config returns the manifests
+      def generate_bootstrap_olm_config
+        HubClustersCreator::Utils::Template::Render
+          .new(config)
+          .render(File.read("#{__dir__}/bootstrap-olm.yaml.erb"))
       end
 
       # generate_bootstrap_job is responsible for generating the bootstrap job
       def generate_bootstrap_job(image)
-        template = <<-YAML
-          apiVersion: batch/v1
-          kind: Job
-          metadata:
-            name: bootstrap
-            namespace: kube-system
-          spec:
-            backoffLimit: 20
-            template:
-              spec:
-                serviceAccountName: sysadmin
-                restartPolicy: OnFailure
-                containers:
-                - name: bootstrap
-                  image: #{image}
-                  imagePullPolicy: Always
-                  env:
-                  - name: CONFIG_DIR
-                    value: /config
-                  - name: PROVIDER
-                    value: #{@provider}
-                  - name: GRAFANA_NAMESPACE
-                    value: metrics
-                  - name: GRAFANA_HOSTNAME
-                    value: loki-grafana
-                  - name: GRAFANA_PASSWORD
-                    value: #{@config[:grafana_password]}
-                  - name: GRAFANA_API_SECRET
-                    value: grafana-api-key
-                  - name: GRAFANA_API_SECRET_NAMESPACE
-                    value: kube-system
-                  - name: GRAFANA_SCHEMA
-                    value: http
-                  - name: OLM_VERSION
-                    value: '#{@config[:olm_version]}'
-                  volumeMounts:
-                  - name: bundle
-                    mountPath: /config/bundles
-                volumes:
-                - name: bundle
-                  configMap:
-                    name: bootstrap
-        YAML
-        template
+        config[:bootstrap_image] = image
+        HubClustersCreator::Utils::Template::Render
+          .new(config)
+          .render(File.read("#{__dir__}/bootstrap-job.yaml.erb"))
       end
     end
     # rubocop:enable Metrics/ClassLength

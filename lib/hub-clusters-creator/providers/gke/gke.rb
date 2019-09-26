@@ -110,8 +110,10 @@ module HubClustersCreator
 
         # @step: initialize the cluster
         begin
+          config[:credentials] = @account
           result = provision_cluster(name, config)
           c = cluster(name)
+          config.delete(:credentials)
         rescue StandardError => e
           raise InitializerError, "failed to initialize the cluster: '#{name}', error: #{e}"
         end
@@ -256,7 +258,6 @@ module HubClustersCreator
             # @check for any conflicts in peering
             (peered_networks(config[:network]) || []).each do |n|
               network_checks.each do |x|
-                puts "checking #{x}, #{n.dest_range}"
                 raise ConfigurationError, "conflicting peered network: #{n.dest_range}" if n.dest_range == x
               end
             end
@@ -275,8 +276,8 @@ module HubClustersCreator
       # default_cloud_nat returns a default cloud nat configuration
       def default_cloud_nat(name = 'cloud-nat')
         [
-          Google::Apis::ComputeV1::RouterNat.new(
-            log_config: Google::Apis::ComputeV1::RouterNatLogConfig.new(enable: false, filter: 'ALL'),
+          Google::Apis::ComputeBeta::RouterNat.new(
+            log_config: Google::Apis::ComputeBeta::RouterNatLogConfig.new(enable: false, filter: 'ALL'),
             name: name,
             nat_ip_allocate_option: 'AUTO_ONLY',
             source_subnetwork_ip_ranges_to_nat: 'ALL_SUBNETWORKS_ALL_IP_RANGES'

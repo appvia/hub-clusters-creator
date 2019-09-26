@@ -3,3 +3,4 @@
 *.orig
 account.json
 dev.env
+console.yaml

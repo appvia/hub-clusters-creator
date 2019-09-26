@@ -391,3 +391,15 @@ properties:
     examples:
       - false
       - true
+
+  enable_service_broker:
+    $id: '#/properties/enable_service_broker'
+    tag: advanced
+    type: boolean
+    title: Enabled the AWS Service Broker
+    default: true
+    description: >
+      Indicates if we should install the AWS service broker
+    examples:
+      - false
+      - true
