@@ -366,6 +366,29 @@ properties:
       - 0.11.0
     pattern: ^(.*)$
 
+  catalog_image_version:
+    $id: '#/properties/catalog_image_version'
+    tag: advanced
+    type: string
+    title: Operator Lifecycle Catalog Image Version
+    default: 'v0.0.1'
+    description: >
+      The version of the OLM catalog to use; note unless you know to change this
+      its probably not advisable.
+    examples:
+      - v0.0.1
+
+  catalog_grpc_registry:
+    $id: '#/properties/catalog_grpc_registry'
+    tag: advanced
+    type: string
+    title: Operator Lifecycle Registry
+    default: ''
+    description: >
+      The hostname for the remote GRPC catalog registry for the OLM
+    examples:
+      - catalog.olm.appvia.io
+
   enable_autoscaler:
     $id: '#/properties/enable_autoscaler'
     tag: default
