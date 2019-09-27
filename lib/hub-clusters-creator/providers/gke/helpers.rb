@@ -125,7 +125,7 @@ module HubClustersCreator
                 disabled: !options[:enable_http_loadbalancer]
               ),
               istio_config: Google::Apis::ContainerV1beta1::IstioConfig.new(
-                auth: 'AUTH_MUTUAL_TLS',
+                auth: 'AUTH_NONE',
                 disabled: !options[:enable_istio]
               ),
               kubernetes_dashboard: Google::Apis::ContainerV1beta1::KubernetesDashboard.new(
