@@ -5,20 +5,79 @@ metadata:
   name: bootstrap-olm
   namespace: kube-system
 data:
+  <%-
+    #
+    ## Namespaces
+    #
+    metrics_ns = 'prometheus'
+    brokers_ns = 'brokers'
+
+    namespaces = [
+      { name: metrics_ns },
+      { name: brokers_ns },
+    ]
+    namespace_labels = {}
+    if context[:enable_istio]
+      namespace_labels["istio-injection"] = "enabled"
+    end
+
+    #
+    ## Storage classes
+    #
+    storage_class = 'default'
+
+
+    #
+    ## Cloud Brokers
+    #
+    broker_username = 'root'
+    broker_password = 'password'
+
+    #
+    ## Operator Subscriptions
+    #
+    operators = [
+      { package: 'prometheus', channel: 'beta', label: 'k8s-app=prometheus-operator', version: 'prometheusoperator.0.33.0' },
+      { package: 'grafana-operator',   channel: 'alpha', label: 'app=grafana-operator', version: 'grafana-operator.v1.3.0' },
+      { package: 'loki-operator', channel: 'stable', label: 'name=loki-operator', version: 'loki-operator.v0.0.1' },
+      { package: 'metrics-operator', channel: 'stable', label: 'name=metrics-operator'},
+      { package: 'mariadb-operator', channel: 'stable', label: 'name=mariadb-operator'},
+    ]
+    if context[:enable_service_broker]
+      case context[:provider]
+      when 'gke'
+        storage_class = 'standard'
+        operators.push(
+          channel: 'stable',
+          label: 'name=gcp-service-broker-operator',
+          namespace:  brokers_ns,
+          package: 'gcp-service-broker-operator',
+        )
+      when 'eks'
+        operators.push(
+          channel: 'stable',
+          label: 'name=aws-service-broker-operator',
+          namespace: brokers_ns,
+          package: 'aws-service-broker-operator',
+        )
+      end
+    end
+  -%>
   #
   ## Metrics namespace
   #
   namespaces.yaml: |
+  <%- namespaces.each do |x| %>
     ---
     apiVersion: v1
     kind: Namespace
     metadata:
-      name: prometheus
-    ---
-    apiVersion: v1
-    kind: Namespace
-    metadata:
-      name: brokers
+      name: <%= x[:name] %>
+      labels:
+        <%- namespace_labels.each do |k,v| %>
+        <%= k %>: <%= v %>
+        <%- end %>
+  <% end %>
 
   #
   ## Catalog
@@ -31,49 +90,15 @@ data:
       name: appvia-catalog
       namespace: olm
     spec:
-      image: quay.io/appvia/operator-catalog:v0.0.1
+      <%- if context[:catalog_grpc_registry] %>
+      addr: <%= context[:catalog_grpc_registry] %>
+      <%- else %>
+      image: quay.io/appvia/operator-catalog:<%= context[:catalog_image_version] %>
+      <%- end %>
       displayName: Appvia Operators
       publisher: Appvia.io
       sourceType: grpc
 
-  #
-  ## Operator subscriptions
-  #
-  <%-
-    namespace = 'prometheus'
-    brokers = 'brokers'
-    broker_username = 'root'
-    broker_password = 'password'
-    operators = [
-      { package: 'prometheus', channel: 'beta', label: 'k8s-app=prometheus-operator', version: 'prometheusoperator.0.33.0' },
-      { package: 'grafana-operator',   channel: 'alpha', label: 'app=grafana-operator', version: 'grafana-operator.v1.3.0' },
-      { package: 'loki-operator', channel: 'stable', label: 'name=loki-operator', version: 'loki-operator.v0.0.1' },
-      { package: 'metrics-operator', channel: 'stable', label: 'name=metrics-operator'},
-      { package: 'mariadb-operator', channel: 'stable', label: 'name=mariadb-operator'},
-    ]
-
-    storage_class = 'default'
-
-    if context[:enable_service_broker]
-      case context[:provider]
-      when 'gke'
-        storage_class = 'standard'
-        operators.push(
-          channel: 'stable',
-          label: 'name=gcp-service-broker-operator',
-          namespace: brokers,
-          package: 'gcp-service-broker-operator',
-        )
-      when 'eks'
-        operators.push(
-          channel: 'stable',
-          label: 'name=aws-service-broker-operator',
-          namespace: brokers,
-          package: 'aws-service-broker-operator',
-        )
-      end
-    end
-  -%>
   #
   ## Operator groups
   #
@@ -83,20 +108,23 @@ data:
     kind: OperatorGroup
     metadata:
       name: operator-group
-      namespace: <%= namespace %>
+      namespace: <%= metrics_ns %>
     spec:
       namespaces:
-        - <%= namespace %>
+        - <%= metrics_ns %>
     ---
     apiVersion: operators.coreos.com/v1
     kind: OperatorGroup
     metadata:
       name: operator-group
-      namespace: brokers
+      namespace: <%= brokers_ns %>
     spec:
       namespaces:
-        - brokers
+        - <%= brokers_ns %>
 
+  #
+  ## Operator subscriptions
+  #
   <%- operators.each_with_index do |x,i| %>
   subscription-<%= i %>.yaml: |
     # operator_selector: <%= x[:label] %>
@@ -104,7 +132,7 @@ data:
     kind: Subscription
     metadata:
       name: <%= x[:package] %>
-      namespace: <%= x[:namespace] || namespace %>
+      namespace: <%= x[:namespace] || metrics_ns %>
     spec:
       name: <%= x[:package] %>
       channel: <%= x[:channel] %>
@@ -122,7 +150,7 @@ data:
     kind: Mariadb
     metadata:
       name: grafana-db
-      namespace: <%= namespace %>
+      namespace: <%= metrics_ns %>
     spec:
       db:
         forcePassword: false
@@ -150,7 +178,7 @@ data:
     kind: Grafana
     metadata:
       name: grafana
-      namespace: <%= namespace %>
+      namespace: <%= metrics_ns %>
     spec:
       initialReplicas: 3
       <%- if context[:provider] == 'eks' %>
@@ -219,7 +247,7 @@ data:
     kind: GrafanaDataSource
     metadata:
       name: prometheus
-      namespace: <%= namespace %>
+      namespace: <%= metrics_ns %>
     spec:
       name: cluster.yaml
       datasources:
@@ -240,7 +268,7 @@ data:
     kind: Loki
     metadata:
       name: loki
-      namespace: <%= namespace %>
+      namespace: <%= metrics_ns %>
     spec:
       loki:
         enabled: true
@@ -273,7 +301,7 @@ data:
     kind: GrafanaDataSource
     metadata:
       name: loki
-      namespace: <%= namespace %>
+      namespace: <%= metrics_ns %>
     spec:
       datasources:
         - access: proxy
@@ -291,7 +319,7 @@ data:
     kind: Metrics
     metadata:
       name: metrics
-      namespace: <%= namespace %>
+      namespace: <%= metrics_ns %>
     spec:
       alertmanager:
         enabled: true
@@ -342,7 +370,7 @@ data:
     kind: AwsServicebroker
     metadata:
       name: aws-broker
-      namespace: <%= brokers %>
+      namespace: <%= brokers_ns %>
     spec:
       image: awsservicebroker/aws-servicebroker:beta
       aws:
@@ -363,7 +391,7 @@ data:
     kind: Mariadb
     metadata:
       name: gcp-broker-db
-      namespace: <%= brokers %>
+      namespace: <%= brokers_ns %>
     spec:
       db:
         forcePassword: false
@@ -391,7 +419,7 @@ data:
     kind: GcpServiceBroker
     metadata:
       name: gcp-broker
-      namespace: <%= brokers %>
+      namespace: <%= brokers_ns %>
     spec:
       broker:
         password: <%= broker_password %>
