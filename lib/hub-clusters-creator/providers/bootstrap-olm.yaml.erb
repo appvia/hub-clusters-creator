@@ -90,10 +90,10 @@ data:
       name: appvia-catalog
       namespace: olm
     spec:
-      <%- if context[:catalog_grpc_registry] %>
-      addr: <%= context[:catalog_grpc_registry] %>
-      <%- else %>
+      <%- if context[:catalog_grpc_registry].empty? %>
       image: quay.io/appvia/operator-catalog:<%= context[:catalog_image_version] %>
+      <%- else %>
+      addr: <%= context[:catalog_grpc_registry] %>
       <%- end %>
       displayName: Appvia Operators
       publisher: Appvia.io
