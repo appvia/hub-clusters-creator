@@ -74,10 +74,10 @@ data:
     metadata:
       name: <%= x[:name] %>
       labels:
-        <%- namespace_labels.each do |k,v| %>
+        <%- namespace_labels.each do |k,v| -%>
         <%= k %>: <%= v %>
-        <%- end %>
-  <% end %>
+        <%- end -%>
+  <%- end %>
 
   #
   ## Catalog
