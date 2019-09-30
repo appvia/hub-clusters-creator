@@ -107,7 +107,7 @@ provision-olm() {
 
 provision-olm-framework() {
   info "provisioning the operator framework catalogs"
-  for i in ${OLM_MANIFESTS}/catalog*.yaml; do
+  while read i; do
     # wait for the catalog to come up
     name=$(awk '/name:/ { print $2 }' ${i} | sed -n 1p)
     if [[ -z "${name}" ]]; then
@@ -124,31 +124,31 @@ provision-olm-framework() {
       error "failed to bring up the catalog: ${1}"
       return 1
     fi
-  done
+  done < <(find ${OLM_MANIFESTS} -type f -name "catalog*.yaml")
 
   # give some time for the catalog to populate
   sleep 10
 
   info "provisioning the namespaces"
-  for i in ${OLM_MANIFESTS}/namespace*.yaml; do
+  while read i; do
     info "creating the namespace from file: ${i}"
     if ! kubectl apply -f ${i}; then
       error "failed to create the namespace"
       return 1
     fi
-  done
+  done < <(find ${OLM_MANIFESTS} -type f -name "namespace*.yaml")
 
   info "provisioing the operator groups in the namespaces"
-  for i in ${OLM_MANIFESTS}/operatorgroups*.yaml; do
+  while read i; do
     info "creating the operatorgroups from: ${i}"
     if ! kubectl apply -f ${i}; then
       error "failed to create the operatorgroups"
       return 1
     fi
-  done
+  done < <(find ${OLM_MANIFESTS} -type f -name "operatorgroups*.yaml")
 
   info "provisioning the operator subscriptions"
-  for i in ${OLM_MANIFESTS}/subscription-*.yaml; do
+  while read i; do
     name=$(awk '/name:/ { print $2 }' ${i} | sed -n 1p)
     namespace=$(awk '/namespace:/ { print $2 }' ${i})
     selector=$(awk '/operator_selector:/ { print $3 }' ${i})
@@ -168,17 +168,17 @@ provision-olm-framework() {
     fi
 
     sleep 5
-  done
+  done < <(find ${OLM_MANIFESTS} -type f -name "subscription-*.yaml" | sort)
 
   info "provisioning the crd packages"
-  for i in ${OLM_MANIFESTS}/crd-*.yaml; do
+  while read i; do
     info "attempting to create crd from file: ${i}"
     if ! kubectl apply -f ${i}; then
       error "failed to create the crd"
       return 1
     fi
     sleep 3
-  done
+  done < <(find ${OLM_MANIFESTS} -type f -name "crd-*.yaml")
 
   info "successfully provisioned the olm framework"
 }

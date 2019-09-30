@@ -5,83 +5,30 @@ metadata:
   name: bootstrap-olm
   namespace: kube-system
 data:
-  <%-
-    #
-    ## Namespaces
-    #
-    metrics_ns = 'prometheus'
-    brokers_ns = 'brokers'
-
-    namespaces = [
-      { name: metrics_ns },
-      { name: brokers_ns },
-    ]
-    namespace_labels = {}
-    if context[:enable_istio]
-      namespace_labels["istio-injection"] = "enabled"
-    end
-
-    #
-    ## Storage classes
-    #
-    storage_class = 'default'
-
-
-    #
-    ## Cloud Brokers
-    #
-    broker_username = 'root'
-    broker_password = 'password'
-
-    #
-    ## Operator Subscriptions
-    #
-    operators = [
-      { package: 'prometheus', channel: 'beta', label: 'k8s-app=prometheus-operator', version: 'prometheusoperator.0.33.0' },
-      { package: 'grafana-operator',   channel: 'alpha', label: 'app=grafana-operator', version: 'grafana-operator.v1.3.0' },
-      { package: 'loki-operator', channel: 'stable', label: 'name=loki-operator', version: 'loki-operator.v0.0.1' },
-      { package: 'metrics-operator', channel: 'stable', label: 'name=metrics-operator'},
-      { package: 'mariadb-operator', channel: 'stable', label: 'name=mariadb-operator'},
-    ]
-    if context[:enable_service_broker]
-      case context[:provider]
-      when 'gke'
-        storage_class = 'standard'
-        operators.push(
-          channel: 'stable',
-          label: 'name=gcp-service-broker-operator',
-          namespace:  brokers_ns,
-          package: 'gcp-service-broker-operator',
-        )
-      when 'eks'
-        operators.push(
-          channel: 'stable',
-          label: 'name=aws-service-broker-operator',
-          namespace: brokers_ns,
-          package: 'aws-service-broker-operator',
-        )
-      end
-    end
-  -%>
-  #
   ## Metrics namespace
-  #
   namespaces.yaml: |
-  <%- namespaces.each do |x| -%>
+  <%- context[:namespaces].each do |x| -%>
     ---
     apiVersion: v1
     kind: Namespace
     metadata:
       name: <%= x[:name] %>
+      <%- if x[:enable_istio] -%>
       labels:
-        <%- namespace_labels.each do |k,v| -%>
-        <%= k %>: <%= v %>
-        <%- end -%>
+        'istio-injection': 'enabled'
+      <%- end -%>
+    ---
+    apiVersion: operators.coreos.com/v1
+    kind: OperatorGroup
+    metadata:
+      name: operator-group
+      namespace: <%= x[:name] %>
+    spec:
+      namespaces:
+        - <%= x[:name] %>
   <%- end -%>
 
-  #
   ## Catalog
-  #
   catalog.yaml: |
     ---
     apiVersion: operators.coreos.com/v1alpha1
@@ -99,58 +46,47 @@ data:
       publisher: Appvia.io
       sourceType: grpc
 
-  #
   ## Operator groups
-  #
+  <%- unless context[:operator_groups].empty? -%>
   operatorgroups.yaml: |
+    <%- context[:operator_groups].each do |x| -%>
     ---
     apiVersion: operators.coreos.com/v1
     kind: OperatorGroup
     metadata:
       name: operator-group
-      namespace: <%= metrics_ns %>
+      namespace: <%= x[:namespace] %>
     spec:
       namespaces:
-        - <%= metrics_ns %>
-    ---
-    apiVersion: operators.coreos.com/v1
-    kind: OperatorGroup
-    metadata:
-      name: operator-group
-      namespace: <%= brokers_ns %>
-    spec:
-      namespaces:
-        - <%= brokers_ns %>
+        - <%= x[:namespace] %>
+    <%- end -%>
+  <%- end -%>
 
-  #
-  ## Operator subscriptions
-  #
-  <%- operators.each_with_index do |x,i| %>
+  ## Subscriptions
+  <%- context[:operators].each_with_index do |x,i| %>
   subscription-<%= i %>.yaml: |
     # operator_selector: <%= x[:label] %>
     apiVersion: operators.coreos.com/v1alpha1
     kind: Subscription
     metadata:
       name: <%= x[:package] %>
-      namespace: <%= x[:namespace] || metrics_ns %>
+      namespace: <%= x[:namespace] || 'prometheus' %>
     spec:
       name: <%= x[:package] %>
       channel: <%= x[:channel] %>
-      installPlanApproval: Automatic
-      source: appvia-catalog
+      installPlanApproval: <%= x[:install_plan] || 'Automatic' %>
+      source: <%= x[:catalog] || 'appvia-catalog' %>
       sourceNamespace: olm
   <%- end -%>
 
-  #
   ## Grafana
-  #
   crd-grafana.yaml: |
     ---
     apiVersion: helm.appvia.io/v1alpha1
     kind: Mariadb
     metadata:
       name: grafana-db
-      namespace: <%= metrics_ns %>
+      namespace: prometheus
     spec:
       db:
         forcePassword: false
@@ -178,20 +114,20 @@ data:
     kind: Grafana
     metadata:
       name: grafana
-      namespace: <%= metrics_ns %>
+      namespace: prometheus
     spec:
       initialReplicas: 3
-      <%- if context[:provider] == 'eks' %>
+      <%- if context[:provider] == 'eks' -%>
       service:
         type: LoadBalancer
         annotations:
           'service.beta.kubernetes.io/aws-load-balancer-backend-protocol': 'http'
-      <%- else %>
+      <%- else -%>
       ingress:
         hostname: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
       service:
         type: NodePort
-      <%- end %>
+      <%- end -%>
       config:
         analytics:
           check_for_updates: true
@@ -201,7 +137,7 @@ data:
           enabled: true
         auth.anonymous:
           enabled: false
-        <%- if context[:github_organization] %>
+        <%- if context[:github_organization] -%>
         auth.github:
           allow_sign_up: true
           allowed_organizations: <%= context[:github_organization] %>
@@ -212,7 +148,7 @@ data:
           enabled: true
           scopes: user,read:org
           token_url: https://github.com/login/oauth/access_token
-        <%- end %>
+        <%- end -%>
         database:
           host: grafana-db
           name: grafana
@@ -228,7 +164,7 @@ data:
           plugins: /var/lib/grafana/plugins
           provisioning: /etc/grafana/provisioning
         security:
-          admin_password: <%= context[:grafana_password] %>
+          admin_password: '<%= context[:grafana_password] %>'
           admin_user: admin
         server:
           domain: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
@@ -247,28 +183,53 @@ data:
     kind: GrafanaDataSource
     metadata:
       name: prometheus
-      namespace: <%= metrics_ns %>
+      namespace: prometheus
     spec:
       name: cluster.yaml
       datasources:
         - name: Prometheus
-          type: prometheus
+        type: prometheus
           access: proxy
           url: http://prometheus-operated:9090
           isDefault: true
           version: 1
           editable: false
 
-  #
+  <%- if context[:enable_istio] %>
+  crd-grafana-istio.yaml: |
+    ---
+    # Disabling MTLS Loki as it breaks the service protocol
+    apiVersion: "authentication.istio.io/v1alpha1"
+    kind: Policy
+    metadata:
+      name: grafana-db-mtls
+      namespace: prometheus
+    spec:
+      targets:
+        - name: grafana-db
+  <%- end %>
+
+
   ## Logging
-  #
   crd-logging.yaml: |
+    <%- if context[:enable_istio] -%>
+    ---
+    # Disabling MTLS Loki as it breaks the service protocol
+    apiVersion: "authentication.istio.io/v1alpha1"
+    kind: Policy
+    metadata:
+      name: loki-mtls
+      namespace: prometheus
+    spec:
+      targets:
+        - name: loki
+    <%- end -%>
     ---
     apiVersion: helm.appvia.io/v1alpha1
     kind: Loki
     metadata:
       name: loki
-      namespace: <%= metrics_ns %>
+      namespace: prometheus
     spec:
       loki:
         enabled: true
@@ -280,7 +241,7 @@ data:
             - ReadWriteOnce
           enabled: true
           size: 10Gi
-          storageClassName: <%= storage_class %>
+          storageClassName: <%= context[:storage_class] %>
         replicas: 1
         serviceMonitor:
           enabled: true
@@ -301,7 +262,7 @@ data:
     kind: GrafanaDataSource
     metadata:
       name: loki
-      namespace: <%= metrics_ns %>
+      namespace: prometheus
     spec:
       datasources:
         - access: proxy
@@ -319,7 +280,7 @@ data:
     kind: Metrics
     metadata:
       name: metrics
-      namespace: <%= metrics_ns %>
+      namespace: prometheus
     spec:
       alertmanager:
         enabled: true
@@ -360,16 +321,14 @@ data:
       prometheus-node-exporter:
         fullnameOverride: node-exporter
 
-  #
   ## Cloud Service Brokers
-  #
   <%- if context[:provider] == 'eks' && context[:enable_service_broker] -%>
   crd-aws-service-broker.yaml: |
     apiVersion: helm.appvia.io/v1alpha1
     kind: AwsServicebroker
     metadata:
       name: aws-broker
-      namespace: <%= brokers_ns %>
+      namespace: brokers
     spec:
       image: awsservicebroker/aws-servicebroker:beta
       aws:
@@ -384,12 +343,26 @@ data:
   <%- end -%>
   <%- if context[:provider] == 'gke' && context[:enable_service_broker] -%>
   crd-gcp-service-broker.yaml: |
+    <%- if context[:enable_istio] -%>
+    # Due to the MySQL protocol we need to mitigate this when in
+    # permissive mode
+    # https://istio.io/faq/security/#mysql-with-mtls
+    ---
+    apiVersion: "authentication.istio.io/v1alpha1"
+    kind: Policy
+    metadata:
+      name: gcp-broker-db-mtls
+      namespace: brokers
+    spec:
+      targets:
+        - name: gcp-broker-db
+    <%- end -%>
     ---
     apiVersion: helm.appvia.io/v1alpha1
     kind: Mariadb
     metadata:
       name: gcp-broker-db
-      namespace: <%= brokers_ns %>
+      namespace: brokers
     spec:
       db:
         forcePassword: false
@@ -417,12 +390,12 @@ data:
     kind: GcpServiceBroker
     metadata:
       name: gcp-broker
-      namespace: <%= brokers_ns %>
+      namespace: brokers
     spec:
       broker:
-        password: <%= broker_password %>
+        password: <%= context[:broker_password] %>
         service_account_json: '<%= JSON.parse(context[:credentials]).to_json %>'
-        username: <%= broker_username %>
+        username: <%= context[:broker_username] %>
       image:
         repository: gcr.io/gcp-service-broker/gcp-service-broker
         tag: v4.3.0
@@ -434,3 +407,39 @@ data:
         mysqlUser: root
       replicaCount: 1
   <%- end -%>
+
+  <%- if context[:enable_kiali] -%>
+  crd-kiali.yaml: |
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: kiali
+      namespace: istio-system
+    type: Opaque
+    data:
+      passphrase: <%= Base64.encode64(context[:kiali_password]) %>
+      username: <%= Base64.encode64('admin') %>
+    ---
+    apiVersion: kiali.io/v1alpha1
+    kind: Kiali
+    metadata:
+      name: kiali
+      namespace: istio-system
+    spec:
+      installation_tag: Appvia
+      istio_namespace: istio-system
+      deployment:
+        namespace: istio-system
+        verbose_mode: '4'
+        view_only_mode: false
+      external_services:
+        grafana:
+          url: 'http://grafana-service.prometheus.svc.cluster.local:3000'
+        prometheus:
+          url: 'http://prometheus.prometheus.svc.cluster.local:9090'
+        #tracing:
+        #  url: ''
+      server:
+        web_root: "/kiali"
+  <%- end %>

@@ -81,7 +81,7 @@ module HubClustersCreator
       # a) pushes in the configuration for the bootstrapper
       # b) rolls out the kubernetes job to bootstrap the cluster
       # c) grabs the services and provisions the dns
-      # rubocop:disable Metrics/AbcSize, Style/ConditionalAssignment, Metrics/CyclomaticComplexity:
+      # rubocop:disable Metrics/AbcSize, Style/ConditionalAssignment, Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
       def bootstrap(image = BOOTSTRAP_IMAGE)
         client.wait_for_kubeapi
 
@@ -90,17 +90,101 @@ module HubClustersCreator
         client.kubectl(DEFAULT_NAMESPACE_AGENT_SA)
         client.kubectl(DEFAULT_CLUSTER_ADMIN_BINDING)
 
-        # @step: check if there is a password for grafana and if not create on
-        if config[:grafana_password].empty?
-          chars = [('a'..'z'), ('A'..'Z')].map(&:to_a).flatten
-          config[:grafana_password] = (0...12).map { chars[rand(chars.length)] }.join
+        ## Namespaces
+        config[:namespaces] = [
+          { name: 'prometheus', enable_istio: true },
+          { name: 'brokers', enable_istio: true }
+        ]
+
+        ## Storage Classes
+        config[:storage_class] = 'default'
+        case config[:provider]
+        when 'gke'
+          config[:storage_class] = 'standard'
         end
 
-        config[:grafana_db_password] = (0...12).map { chars[rand(chars.length)] }.join
+        ## Operators
+        config[:operators] = [
+          {
+            package: 'prometheus',
+            channel: 'beta',
+            label: 'k8s-app=prometheus-operator',
+            namespace: 'prometheus'
+          },
+          {
+            package: 'grafana-operator',
+            channel: 'alpha',
+            label: 'app=grafana-operator',
+            namespace: 'prometheus'
+          },
+          {
+            package: 'loki-operator',
+            channel: 'stable',
+            label: 'name=loki-operator',
+            namespace: 'prometheus'
+          },
+          {
+            package: 'metrics-operator',
+            channel: 'stable',
+            label: 'name=metrics-operator',
+            namespace: 'prometheus'
+          },
+          {
+            package: 'mariadb-operator',
+            channel: 'stable',
+            label: 'name=mariadb-operator',
+            namespace: 'prometheus'
+          }
+        ]
 
-        # related to the cloud service broker
-        config[:broker_db_password] = (0...12).map { chars[rand(chars.length)] }.join
+        ## Operatorgroups
+        config[:operator_groups] ||= []
+        if config[:enable_istio]
+          config[:operator_groups].push(
+            namespace: 'istio-system'
+          )
+        end
+
+        ## Grafana
+        config[:grafana_password] = random(12) if config[:grafana_password].nil?
+        config[:grafana_db_password] = random(12)
+
+        ## Cloud Service Brokers
+        config[:broker_username] = 'root'
+        config[:broker_password] = random(12) if config[:broker_password].nil?
+        config[:broker_db_password] = random(12)
         config[:broker_db_name] = 'broker'
+        if config[:enable_service_broker]
+          case config[:provider]
+          when 'gke'
+            config[:operators].push(
+              channel: 'stable',
+              label: 'name=gcp-service-broker-operator',
+              namespace: 'brokers',
+              package: 'gcp-service-broker-operator'
+            )
+          when 'eks'
+            config[:operators].push(
+              channel: 'stable',
+              label: 'name=aws-service-broker-operator',
+              namespace: 'brokers',
+              package: 'aws-service-broker-operator'
+            )
+          end
+        end
+
+        ## Istio Related
+        config[:kiali_password] = random(12) if config[:kiali_password].nil?
+        if config[:enable_istio]
+          config[:enable_kiali] = true
+          config[:operators].push(
+            catalog: 'operatorhubio-catalog',
+            channel: 'stable',
+            label: 'app=kiali-operator',
+            namespace: 'istio-system',
+            package: 'kiali'
+          )
+        end
 
         info 'attempting to bootstrap the cluster configuration'
         client.kubectl(generate_bootstrap_config)
@@ -154,9 +238,17 @@ module HubClustersCreator
           }
         }
       end
-      # rubocop:enable Metrics/AbcSize, Style/ConditionalAssignment, Metrics/CyclomaticComplexity:
+      # rubocop:enable Metrics/AbcSize, Style/ConditionalAssignment, Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
 
       private
+
+      def random(length = 12)
+        (0...length).map { chars[rand(chars.length)] }.join
+      end
+
+      def chars
+        @chars ||= [('a'..'z'), ('A'..'Z')].map(&:to_a).flatten
+      end
 
       # generate_bootstrap_config charts and repos
       def generate_bootstrap_config
