@@ -146,13 +146,13 @@ module HubClustersCreator
         end
 
         ## Grafana
-        config[:grafana_password] = random(12) if config[:grafana_password].nil?
-        config[:grafana_db_password] = random(12)
+        config[:grafana_password] = has?(config[:grafana_password], random(12))
+        config[:grafana_db_password] = has?(config[:grafana_db_password], random(12))
 
         ## Cloud Service Brokers
         config[:broker_username] = 'root'
-        config[:broker_password] = random(12) if config[:broker_password].nil?
-        config[:broker_db_password] = random(12)
+        config[:broker_password] = has?(config[:broker_password], random(12))
+        config[:broker_db_password] = has?(config[:broker_db_password], random(12))
         config[:broker_db_name] = 'broker'
         if config[:enable_service_broker]
           case config[:provider]
@@ -174,7 +174,8 @@ module HubClustersCreator
         end
 
         ## Istio Related
-        config[:kiali_password] = random(12) if config[:kiali_password].nil?
+        config[:kiali_password] = has?(config[:kiali_password], random(12))
+
         if config[:enable_istio]
           config[:enable_kiali] = true
           config[:operators].push(
@@ -223,6 +224,8 @@ module HubClustersCreator
         resource = client.wait('grafana-ingress', namespace, resource_type, version: resource_version) do |x|
           x.status.loadBalancer.ingress.empty? ? false : true
         end
+
+        # retrieve the hostname or address of the loadbalancer
         host = resource.status.loadBalancer.ingress.first
         case svc.spec.type
         when 'NodePort'
@@ -230,17 +233,43 @@ module HubClustersCreator
         else
           host = host.hostname
         end
+
+        ## the result
         {
+          catalog: {
+            enabled: config[:enable_service_broker],
+            namespace: 'catalog'
+          },
+          istio: {
+            enabled: config[:enable_istio],
+            namespace: 'istio-system'
+          },
           grafana: {
-            hostname: host,
-            key: grafana_api_key,
-            password: @config[:grafana_password]
+            address: host,
+            api_key: grafana_api_key,
+            password: config[:grafana_password],
+            url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"
+          },
+          kiali: {
+            enabled: config[:enable_istio],
+            password: config[:kiali_password],
+            url: 'http://kiali.istio-system.svc.cluster.local:20001'
+          },
+          prometheus: {
+            enabled: true,
+            url: 'http://prometheus.prometheus.svc.cluster.local:9090'
           }
         }
       end
       # rubocop:enable Metrics/AbcSize, Style/ConditionalAssignment, Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
 
       private
+
+      def has?(value, default_value)
+        return default_value if value.nil? || value.empty?
+
+        value
+      end
 
       def random(length = 12)
         (0...length).map { chars[rand(chars.length)] }.join

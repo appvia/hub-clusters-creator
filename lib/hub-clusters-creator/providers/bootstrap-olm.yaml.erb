@@ -164,7 +164,7 @@ data:
           plugins: /var/lib/grafana/plugins
           provisioning: /etc/grafana/provisioning
         security:
-          admin_password: '<%= context[:grafana_password] %>'
+          admin_password: <%= context[:grafana_password] %>
           admin_user: admin
         server:
           domain: <%= context[:grafana_hostname] %>.<%= context[:domain] %>
@@ -188,7 +188,7 @@ data:
       name: cluster.yaml
       datasources:
         - name: Prometheus
-        type: prometheus
+          type: prometheus
           access: proxy
           url: http://prometheus-operated:9090
           isDefault: true
@@ -264,6 +264,7 @@ data:
       name: loki
       namespace: prometheus
     spec:
+      name: logging.yaml
       datasources:
         - access: proxy
           editable: false
@@ -272,7 +273,6 @@ data:
           type: loki
           url: http://loki:3100
           version: 1
-      name: logging.yaml
 
   crd-monitoring.yaml: |
     ---

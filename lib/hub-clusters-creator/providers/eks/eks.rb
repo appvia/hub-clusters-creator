@@ -99,7 +99,7 @@ module HubClustersCreator
           region: @region
         }
         result = HubClustersCreator::Providers::Bootstrap.new(name, 'eks', client, config).bootstrap
-        address = result[:grafana][:hostname]
+        address = result[:grafana][:address]
         config.delete(:credentials)
 
         info 'adding the dns entry for the grafana dashboard'
@@ -109,25 +109,12 @@ module HubClustersCreator
           cluster: {
             ca: outputs['EKSCA'],
             endpoint: outputs['EKSEndpoint'],
-            global_service_account_name: 'default',
-            global_service_account_token: Base64.decode64(client.account('robot', 'default')),
             service_account_name: 'sysadmin',
-            service_account_namespace: 'sysadmin',
+            service_account_namespace: 'kube-system',
             service_account_token: Base64.decode64(client.account('sysadmin'))
           },
           config: config,
-          services: {
-            catalog: {
-              namespace: 'catalog'
-            },
-            aws_sb: {
-              namespace: 'aws-sb'
-            },
-            grafana: {
-              api_key: result[:grafana][:key],
-              url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"
-            }
-          }
+          services: result
         }
       end
       # rubocop:enable Metrics/AbcSize

@@ -168,7 +168,7 @@ provision-olm-framework() {
     fi
 
     sleep 5
-  done < <(find ${OLM_MANIFESTS} -type f -name "subscription-*.yaml" | sort)
+  done < <(find ${OLM_MANIFESTS} -type f -name "subscription-*.yaml")
 
   info "provisioning the crd packages"
   while read i; do

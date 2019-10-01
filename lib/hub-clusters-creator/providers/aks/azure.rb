@@ -188,22 +188,12 @@ module HubClustersCreator
             ca: ca,
             endpoint: "https://#{endpoint}",
             service_account: 'sysadmin',
-            global_service_account_name: 'robot',
-            global_service_account_token: Base64.decode64(kube.account('robot', 'default')),
             service_account_name: 'sysadmin',
-            service_account_namespace: 'sysadmin',
+            service_account_namespace: 'kube-system',
             service_account_token: Base64.decode64(kube.account('sysadmin'))
           },
           config: config,
-          services: {
-            catalog: {
-              namespace: 'catalog'
-            },
-            grafana: {
-              api_key: result[:grafana][:key],
-              url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"
-            }
-          }
+          services: result
         }
       end
       # rubocop:enable Metrics/AbcSize

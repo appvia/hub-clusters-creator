@@ -122,22 +122,12 @@ module HubClustersCreator
           cluster: {
             ca: c.master_auth.cluster_ca_certificate,
             endpoint: "https://#{c.endpoint}",
-            global_service_account_name: 'default',
-            global_service_account_token: Base64.decode64(@client.account('robot', 'default')),
             service_account_name: 'sysadmin',
-            service_account_namespace: 'sysadmin',
+            service_account_namespace: 'kube-system',
             service_account_token: Base64.decode64(@client.account('sysadmin'))
           },
           config: config,
-          services: {
-            catalog: {
-              namespace: 'catalog'
-            },
-            grafana: {
-              api_key: result[:grafana][:key],
-              url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"
-            }
-          }
+          services: result
         }
       end
       # rubocop:enable Metrics/AbcSize
@@ -207,7 +197,7 @@ module HubClustersCreator
 
         # @step: bootstrap the cluster and wait
         result = HubClustersCreator::Providers::Bootstrap.new(name, 'gke', @client, config).bootstrap
-        address = result[:grafana][:hostname]
+        address = result[:grafana][:address]
 
         # @step: update the dns record for the ingress
         info "adding a dns record for #{config[:grafana_hostname]} => #{address}"
