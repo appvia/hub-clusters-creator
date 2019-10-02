@@ -65,7 +65,7 @@ module HubClustersCreator
       YAML
 
       # is the name of the container image
-      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:olm'
+      BOOTSTRAP_IMAGE = 'quay.io/appvia/hub-bootstrap:v0.1.0'
 
       attr_accessor :client, :config, :name
 
@@ -235,14 +235,10 @@ module HubClustersCreator
         end
 
         ## the result
-        {
+        result = {
           catalog: {
             enabled: config[:enable_service_broker],
             namespace: 'catalog'
-          },
-          istio: {
-            enabled: config[:enable_istio],
-            namespace: 'istio-system'
           },
           grafana: {
             address: host,
@@ -250,16 +246,36 @@ module HubClustersCreator
             password: config[:grafana_password],
             url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"
           },
-          kiali: {
-            enabled: config[:enable_istio],
-            password: config[:kiali_password],
-            url: 'http://kiali.istio-system.svc.cluster.local:20001'
+          loki: {
+            enabled: true,
+            url: 'http://loki.prometheus.svc.cluster.local:3000'
           },
           prometheus: {
             enabled: true,
             url: 'http://prometheus.prometheus.svc.cluster.local:9090'
           }
         }
+        if config[:enable_service_broker]
+          result[:broker] = {
+            enabled: true,
+            namespace: 'brokers',
+            provider: config[:provider]
+          }
+        end
+
+        if config[:enable_istio]
+          result[:istio] = {
+            enabled: true,
+            namespace: 'istio-system'
+          }
+          result[:kiali] = {
+            enabled: true,
+            password: config[:kiali_password],
+            url: 'http://kiali.istio-system.svc.cluster.local:20001'
+          }
+        end
+
+        result
       end
       # rubocop:enable Metrics/AbcSize, Style/ConditionalAssignment, Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
 

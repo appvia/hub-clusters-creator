@@ -82,7 +82,7 @@ module HubClustersCreator
 
     # wait is used to poll until a resource meets the needs of the consumer
     # rubocop:disable Lint/RescueException,Metrics/CyclomaticComplexity,Metrics/AbcSize
-    def wait(name, namespace, kind, version: 'v1', max_retries: 50, timeout: 900, interval: 5, &block)
+    def wait(name, namespace, kind, version: 'v1', max_retries: 60, timeout: 1200, interval: 5, &block)
       retries = counter = 0
       while counter < timeout
         begin

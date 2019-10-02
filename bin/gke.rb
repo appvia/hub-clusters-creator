@@ -40,7 +40,7 @@ puts creator.provision(
   github_organization: ENV['GITHUB_ORG'],
   grafana_hostname: 'grafana',
   grafana_ingress: true,
-  machine_type: 'n1-standard-1',
+  machine_type: 'n1-standard-2',
   name: 'test',
   size: 1,
   version: '1.14.6-gke.1'

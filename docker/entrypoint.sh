@@ -107,7 +107,7 @@ provision-olm() {
 
 provision-olm-framework() {
   info "provisioning the operator framework catalogs"
-  while read i; do
+  for i in ${OLM_MANIFESTS}/catalog*.yaml; do
     # wait for the catalog to come up
     name=$(awk '/name:/ { print $2 }' ${i} | sed -n 1p)
     if [[ -z "${name}" ]]; then
@@ -124,19 +124,19 @@ provision-olm-framework() {
       error "failed to bring up the catalog: ${1}"
       return 1
     fi
-  done < <(find ${OLM_MANIFESTS} -type f -name "catalog*.yaml")
+  done
 
   # give some time for the catalog to populate
   sleep 10
 
   info "provisioning the namespaces"
-  while read i; do
+  for i in ${OLM_MANIFESTS}/namespace*.yaml; do
     info "creating the namespace from file: ${i}"
     if ! kubectl apply -f ${i}; then
       error "failed to create the namespace"
       return 1
     fi
-  done < <(find ${OLM_MANIFESTS} -type f -name "namespace*.yaml")
+  done
 
   info "provisioing the operator groups in the namespaces"
   while read i; do
@@ -145,10 +145,10 @@ provision-olm-framework() {
       error "failed to create the operatorgroups"
       return 1
     fi
-  done < <(find ${OLM_MANIFESTS} -type f -name "operatorgroups*.yaml")
+  done < <(find . -type f -name "operatorgroups*.yaml")
 
   info "provisioning the operator subscriptions"
-  while read i; do
+  for i in ${OLM_MANIFESTS}/subscription-*.yaml; do
     name=$(awk '/name:/ { print $2 }' ${i} | sed -n 1p)
     namespace=$(awk '/namespace:/ { print $2 }' ${i})
     selector=$(awk '/operator_selector:/ { print $3 }' ${i})
@@ -168,17 +168,17 @@ provision-olm-framework() {
     fi
 
     sleep 5
-  done < <(find ${OLM_MANIFESTS} -type f -name "subscription-*.yaml")
+  done
 
   info "provisioning the crd packages"
-  while read i; do
+  for i in ${OLM_MANIFESTS}/crd-*.yaml; do
     info "attempting to create crd from file: ${i}"
     if ! kubectl apply -f ${i}; then
       error "failed to create the crd"
       return 1
     fi
     sleep 3
-  done < <(find ${OLM_MANIFESTS} -type f -name "crd-*.yaml")
+  done
 
   info "successfully provisioned the olm framework"
 }
