@@ -92,8 +92,10 @@ module HubClustersCreator
 
         ## Namespaces
         config[:namespaces] = [
-          { name: 'prometheus', enable_istio: true },
-          { name: 'brokers', enable_istio: true }
+          { name: 'brokers', enable_istio: true },
+          { name: 'grafana', enable_istio: true },
+          { name: 'logging', enable_istio: false },
+          { name: 'prometheus', enable_istio: true }
         ]
 
         ## Storage Classes
@@ -115,13 +117,13 @@ module HubClustersCreator
             package: 'grafana-operator',
             channel: 'alpha',
             label: 'app=grafana-operator',
-            namespace: 'prometheus'
+            namespace: 'grafana'
           },
           {
             package: 'loki-operator',
             channel: 'stable',
             label: 'name=loki-operator',
-            namespace: 'prometheus'
+            namespace: 'logging'
           },
           {
             package: 'metrics-operator',
@@ -133,7 +135,7 @@ module HubClustersCreator
             package: 'mariadb-operator',
             channel: 'stable',
             label: 'name=mariadb-operator',
-            namespace: 'prometheus'
+            namespace: 'grafana'
           }
         ]
 
@@ -243,15 +245,18 @@ module HubClustersCreator
           grafana: {
             address: host,
             api_key: grafana_api_key,
+            namespace: 'grafana',
             password: config[:grafana_password],
             url: "http://#{config[:grafana_hostname]}.#{config[:domain]}"
           },
           loki: {
             enabled: true,
-            url: 'http://loki.prometheus.svc.cluster.local:3000'
+            namespace: 'logging',
+            url: 'http://loki.logging.svc.cluster.local:3100'
           },
           prometheus: {
             enabled: true,
+            namespace: 'prometheus',
             url: 'http://prometheus.prometheus.svc.cluster.local:9090'
           }
         }

@@ -86,7 +86,7 @@ data:
     kind: Mariadb
     metadata:
       name: grafana-db
-      namespace: prometheus
+      namespace: grafana
     spec:
       db:
         forcePassword: false
@@ -114,7 +114,7 @@ data:
     kind: Grafana
     metadata:
       name: grafana
-      namespace: prometheus
+      namespace: grafana
     spec:
       initialReplicas: 3
       <%- if context[:provider] == 'eks' -%>
@@ -184,14 +184,14 @@ data:
     kind: GrafanaDataSource
     metadata:
       name: prometheus
-      namespace: prometheus
+      namespace: grafana
     spec:
       name: cluster.yaml
       datasources:
         - name: Prometheus
           type: prometheus
           access: proxy
-          url: http://prometheus-operated:9090
+          url: http://prometheus-operated.prometheus.svc.cluster.local:9090
           isDefault: true
           version: 1
           editable: false
@@ -204,7 +204,7 @@ data:
     kind: Policy
     metadata:
       name: grafana-db-mtls
-      namespace: prometheus
+      namespace: grafana
     spec:
       targets:
         - name: grafana-db
@@ -213,24 +213,12 @@ data:
 
   ## Logging
   crd-logging.yaml: |
-    <%- if context[:enable_istio] -%>
-    ---
-    # Disabling MTLS Loki as it breaks the service protocol
-    apiVersion: "authentication.istio.io/v1alpha1"
-    kind: Policy
-    metadata:
-      name: loki-mtls
-      namespace: prometheus
-    spec:
-      targets:
-        - name: loki
-    <%- end -%>
     ---
     apiVersion: helm.appvia.io/v1alpha1
     kind: Loki
     metadata:
       name: loki
-      namespace: prometheus
+      namespace: logging
     spec:
       loki:
         enabled: true
@@ -263,7 +251,7 @@ data:
     kind: GrafanaDataSource
     metadata:
       name: loki
-      namespace: prometheus
+      namespace: grafana
     spec:
       name: logging.yaml
       datasources:
@@ -272,7 +260,7 @@ data:
           isDefault: false
           name: loki
           type: loki
-          url: http://loki:3100
+          url: http://loki.logging.svc.cluster.local:3100
           version: 1
 
   crd-monitoring.yaml: |
@@ -436,7 +424,7 @@ data:
         view_only_mode: false
       external_services:
         grafana:
-          url: 'http://grafana-service.prometheus.svc.cluster.local:3000'
+          url: 'http://grafana-service.grafana.svc.cluster.local:3000'
         prometheus:
           url: 'http://prometheus.prometheus.svc.cluster.local:9090'
         #tracing:
