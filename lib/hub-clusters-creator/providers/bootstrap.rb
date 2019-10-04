@@ -212,7 +212,7 @@ module HubClustersCreator
         namespace = 'prometheus'
 
         # @step: grab the loki service
-        svc = client.get(name, namespace, 'services')
+        svc = client.get(name, 'grafana', 'services')
         case svc.spec.type
         when 'NodePort'
           resource_type = 'ingresses'
@@ -223,7 +223,7 @@ module HubClustersCreator
         end
 
         info 'waiting for grafana service load balancer to be provisioned'
-        resource = client.wait('grafana-ingress', namespace, resource_type, version: resource_version) do |x|
+        resource = client.wait('grafana-ingress', 'grafana', resource_type, version: resource_version) do |x|
           x.status.loadBalancer.ingress.empty? ? false : true
         end
 
