@@ -117,6 +117,7 @@ data:
           prometheus.io/port: '7979'
       sources:
         - ingress
+        - service
       fullnameOverride: external-dns
 
   ## Grafana
@@ -162,6 +163,7 @@ data:
         type: LoadBalancer
         annotations:
           'service.beta.kubernetes.io/aws-load-balancer-backend-protocol': 'http'
+          'external-dns.alpha.kubernetes.io/hostname': '<%= context[:grafana_hostname] %>.<%= context[:domain] %>'
       <%- else -%>
       ingress:
         enabled: true
