@@ -95,7 +95,7 @@ module HubClustersCreator
           { name: 'brokers', enable_istio: true },
           { name: 'grafana', enable_istio: true },
           { name: 'logging', enable_istio: false },
-          { name: 'prometheus', enable_istio: true }
+          { name: 'prometheus', enable_istio: false }
         ]
 
         ## Storage Classes
@@ -165,6 +165,12 @@ module HubClustersCreator
               namespace: 'brokers',
               package: 'gcp-service-broker-operator'
             )
+            config[:operators].push(
+              package: 'mariadb-operator',
+              channel: 'stable',
+              label: 'name=mariadb-operator',
+              namespace: 'brokers'
+            )
           when 'eks'
             config[:operators].push(
               channel: 'stable',
@@ -209,7 +215,6 @@ module HubClustersCreator
 
         info 'bootstrap has successfully completed'
         name = 'grafana-service'
-        namespace = 'prometheus'
 
         # @step: grab the loki service
         svc = client.get(name, 'grafana', 'services')

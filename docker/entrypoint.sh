@@ -67,6 +67,36 @@ provision-gke-istio() {
   return 0
 }
 
+provision-olm-approvals() {
+  info "disabling the automatic approvals on the subscriptions post installation"
+  subscriptions=""
+  for ((i=0; i<5; i++)); do
+    subscriptions=$(kubectl get subscriptions --all-namespaces --no-headers | awk '{ printf("%s %s\n", $1,$2) }')
+    [[ $? -eq 0 ]] && break
+    sleep 3
+  done
+
+  [[ -n "${subscriptions}" ]] || return 1
+
+  while read namespace name; do
+    info "disabling the approval on ${name}"
+    patched=false
+    for ((i=0; i<3; i++)); do
+      if kubectl -n ${namespace} patch subscription ${name} \
+        --type=json -p='[{"op": "replace", "path": "/spec/installPlanApproval", "value": "Manual"}]'; then
+        patched=true
+        break
+      fi
+      sleep 3
+    done
+
+    if [[ $patched == false ]]; then
+      error "failed to patch the subscription: ${namespace}/${name}"
+      return 1
+    fi
+  done <<< ${subscriptions}
+}
+
 provision-olm() {
   info "provisioning the operator lifecycle manager, version: ${OLM_VERSION}"
   for manifest in olm.crd olm; do
@@ -318,4 +348,9 @@ else
     error "failed to provision the secret, we will retry with a backoff"
     sleep 5
   done
+fi
+
+if ! provision-olm-approvals; then
+  error "failed to remove the approvals on subscriptions"
+  exit 1
 fi
