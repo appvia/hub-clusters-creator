@@ -101,7 +101,7 @@ data:
       provider: google
       google:
         # @TODO need to change this to one with reduced perms
-        serviceAccountKey: '<%= context[:credentials] %>'
+        serviceAccountKey: '<%= JSON.parse(context[:credentials]).to_json %>'
       <%- end -%>
       domainFilters:
         - <%= context[:domain] %>

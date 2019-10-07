@@ -176,9 +176,6 @@ module HubClustersCreator
                             config[:name],
                             ['tcp:443,5443,8443'])
         end
-
-        info "provisioning a dns entry for the master api = > #{gke.endpoint}"
-        # dns(kubeapi_name(config).to_s, gke.endpoint, config[:domain])
       end
       # rubocop:enable Metrics/AbcSize
 
