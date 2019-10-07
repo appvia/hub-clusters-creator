@@ -85,7 +85,6 @@ module HubClustersCreator
           # @step: ensure we have some nodes
           info 'waiting for some nodes to become available'
           client.wait('aws-node', 'kube-system', 'daemonsets', version: 'extensions/v1beta1') do |x|
-            puts x.status.numberReady.positive?
             x.status.numberReady.positive?
           end
         end
@@ -98,13 +97,8 @@ module HubClustersCreator
           account_id: @account_id,
           region: @region
         }
+
         result = HubClustersCreator::Providers::Bootstrap.new(name, 'eks', client, config).bootstrap
-        address = result[:grafana][:address]
-        config.delete(:credentials)
-
-        info 'adding the dns entry for the grafana dashboard'
-        dns(config[:grafana_hostname], address, config[:domain])
-
         {
           cluster: {
             ca: outputs['EKSCA'],
@@ -228,33 +222,6 @@ module HubClustersCreator
         @client ||= Aws::CloudFormation::Client.new(
           credentials: @credentials,
           region: @region
-        )
-      end
-
-      # dns is responsible for adding a dns record
-      def dns(source, dest, zone, record: 'CNAME', ttl: 60)
-        hosting_zone = get_hosting_zone(zone)
-        if hosting_zone.nil?
-          raise ArgumentError, "no hosting domain found for: '#{zone}'"
-        end
-
-        fqdn = "#{source}.#{zone}"
-
-        route53.change_resource_record_sets(
-          change_batch: {
-            changes: [
-              {
-                action: 'UPSERT',
-                resource_record_set: {
-                  name: fqdn,
-                  resource_records: [{ value: dest }],
-                  ttl: ttl,
-                  type: record
-                }
-              }
-            ]
-          },
-          hosted_zone_id: hosting_zone.id
         )
       end
 

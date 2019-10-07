@@ -254,6 +254,10 @@ module HubClustersCreator
             enabled: config[:enable_service_broker],
             namespace: 'catalog'
           },
+          external_dns: {
+            enabled: true,
+            namespace: 'kube-dns'
+          },
           grafana: {
             address: host,
             api_key: grafana_api_key,
