@@ -92,8 +92,9 @@ module HubClustersCreator
 
         ## Namespaces
         config[:namespaces] = [
-          { name: 'brokers', enable_istio: true },
-          { name: 'grafana', enable_istio: true },
+          { name: 'brokers', enable_istio: false },
+          { name: 'grafana', enable_istio: false },
+          { name: 'kube-dns', enable_istio: false },
           { name: 'logging', enable_istio: false },
           { name: 'prometheus', enable_istio: false }
         ]
@@ -136,6 +137,12 @@ module HubClustersCreator
             channel: 'stable',
             label: 'name=mariadb-operator',
             namespace: 'grafana'
+          },
+          {
+            package: 'external-dns-operator',
+            channel: 'stable',
+            label: 'name=external-dns-operator',
+            namespace: 'kube-dns'
           }
         ]
 
@@ -246,6 +253,10 @@ module HubClustersCreator
           catalog: {
             enabled: config[:enable_service_broker],
             namespace: 'catalog'
+          },
+          external_dns: {
+            enabled: true,
+            namespace: 'kube-dns'
           },
           grafana: {
             address: host,

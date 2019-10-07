@@ -79,6 +79,47 @@ data:
       sourceNamespace: olm
   <%- end -%>
 
+  ## External DNS
+  crd-external-dns.yaml: |
+    ---
+    apiVersion: helm.appvia.io/v1alpha1
+    kind: ExternalDns
+    metadata:
+      name: external-dns
+      namespace: kube-dns
+    spec:
+      <%- if context[:provider] == 'eks' -%>
+      provider: aws
+      aws:
+        credentials:
+          accessKey: <%= context[:credentials][:access_id] %>
+          mountPath: "/.aws"
+          secretKey: <%= context[:credentials][:access_key] %>
+          region: <%= context[:credentials][:region] %>
+      <%- end -%>
+      <%- if context[:provider] == 'gke' -%>
+      provider: google
+      google:
+        # @TODO need to change this to one with reduced perms
+        serviceAccountKey: '<%= JSON.parse(context[:credentials]).to_json %>'
+      <%- end -%>
+      domainFilters:
+        - <%= context[:domain] %>
+      policy: sync
+      metrics:
+        enabled: true
+      rbac:
+        create: true
+        serviceAccountName: external-dns
+      service:
+        annotations:
+          prometheus.io/scrape: 'true'
+          prometheus.io/port: '7979'
+      sources:
+        - ingress
+        - service
+      fullnameOverride: external-dns
+
   ## Grafana
   crd-grafana.yaml: |
     ---
@@ -122,6 +163,7 @@ data:
         type: LoadBalancer
         annotations:
           'service.beta.kubernetes.io/aws-load-balancer-backend-protocol': 'http'
+          'external-dns.alpha.kubernetes.io/hostname': '<%= context[:grafana_hostname] %>.<%= context[:domain] %>'
       <%- else -%>
       ingress:
         enabled: true

@@ -176,9 +176,6 @@ module HubClustersCreator
                             config[:name],
                             ['tcp:443,5443,8443'])
         end
-
-        info "provisioning a dns entry for the master api = > #{gke.endpoint}"
-        # dns(kubeapi_name(config).to_s, gke.endpoint, config[:domain])
       end
       # rubocop:enable Metrics/AbcSize
 
@@ -196,14 +193,7 @@ module HubClustersCreator
         @client.kubectl(DEFAULT_PSP_CLUSTERROLE_BINDING)
 
         # @step: bootstrap the cluster and wait
-        result = HubClustersCreator::Providers::Bootstrap.new(name, 'gke', @client, config).bootstrap
-        address = result[:grafana][:address]
-
-        # @step: update the dns record for the ingress
-        info "adding a dns record for #{config[:grafana_hostname]} => #{address}"
-        dns(config[:grafana_hostname].split('.').first, address, config[:domain])
-
-        result
+        HubClustersCreator::Providers::Bootstrap.new(name, 'gke', @client, config).bootstrap
       end
       # rubocop:enable Metrics/AbcSize
 

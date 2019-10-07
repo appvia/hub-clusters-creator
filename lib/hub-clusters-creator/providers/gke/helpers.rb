@@ -347,42 +347,6 @@ module HubClustersCreator
           subnets(network).map(&:name).include?(name)
         end
 
-        # dns is responsible for adding / updating a dns record in a zone
-        def dns(src, dest, zone, record = 'A')
-          raise ArgumentError, "the managed zone: #{zone} does not exist" unless domain?(zone)
-
-          hostname = "#{src}.#{zone}."
-          change = Google::Apis::DnsV1::Change.new(
-            additions: [
-              Google::Apis::DnsV1::ResourceRecordSet.new(
-                kind: 'dns#resourceRecordSet',
-                name: hostname,
-                rrdatas: [dest],
-                ttl: 120,
-                type: record
-              )
-            ]
-          )
-
-          # @step: check a record already exists and if so add for deletion
-          dns_records(zone).rrsets.each do |x|
-            next unless x.name == hostname
-
-            change.deletions = [x]
-          end
-
-          managed_zone = domain(zone)
-          @dns.create_change(@project, managed_zone.name, change)
-        end
-
-        # dns_records returns a list of dns recordsets
-        def dns_records(zone)
-          raise ArgumentError, "the managed zone: #{zone} does not exist" unless domain?(zone)
-
-          managed_zone = domain(zone)
-          @dns.list_resource_record_sets(@project, managed_zone.name)
-        end
-
         # domain? checks if the domain exists
         def domain?(name)
           domains.map { |x| x.dns_name.chomp('.') }.include?(name)
