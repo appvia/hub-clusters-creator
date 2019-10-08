@@ -280,6 +280,19 @@ properties:
       - '10.0.160.0/20'
     pattern: ^(([\d]{1,3}\.){3}[\d]{1,3}\/[\d]{1,2}|)$
 
+  github_organization:
+    $id: '#/properties/github_organization'
+    tag: default
+    type: string
+    title: Github Organization
+    default: ''
+    description: >
+      Your github organization, this is used to enabled github as an IDP for
+      applications.
+    examples:
+      - ''
+    pattern: ^(.*)$
+
   github_client_id:
     $id: '#/properties/github_client_id'
     tag: default
