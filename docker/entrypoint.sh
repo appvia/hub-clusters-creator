@@ -270,7 +270,7 @@ deploy-manifests() {
 # loki,bundles/loki,overrides/loki.yaml
 deploy-bundles() {
   info "installing helm tiller service"
-  helm init --wait --service-account=sysadmin >/dev/null || return 1
+  helm init --wait --service-account=hub-admin >/dev/null || return 1
 
   if [[ -f ${HELM_REPOS} ]]; then
     info "installing any repository requirements"
@@ -334,21 +334,21 @@ if ! provision-olm-framework; then
   exit 1
 fi
 
-if ! provision-grafana; then
-  error "failed provision grafana instance"
-  exit 1
-else
-  for ((i=0; i<3; i++)) do
-    if kubectl -n ${GRAFANA_API_SECRET_NAMESPACE} create \
-      secret generic ${GRAFANA_API_SECRET} \
-      --from-literal=key=${GRAFANA_API_KEY}; then
-      info "adding the grafana api key secret"
-      break
-    fi
-    error "failed to provision the secret, we will retry with a backoff"
-    sleep 5
-  done
-fi
+#if ! provision-grafana; then
+#  error "failed provision grafana instance"
+#  exit 1
+#else
+#  for ((i=0; i<3; i++)) do
+#    if kubectl -n ${GRAFANA_API_SECRET_NAMESPACE} create \
+#      secret generic ${GRAFANA_API_SECRET} \
+#      --from-literal=key=${GRAFANA_API_KEY}; then
+#      info "adding the grafana api key secret"
+#      break
+#    fi
+#    error "failed to provision the secret, we will retry with a backoff"
+#    sleep 5
+#  done
+#fi
 
 if ! provision-olm-approvals; then
   error "failed to remove the approvals on subscriptions"
