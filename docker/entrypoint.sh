@@ -270,7 +270,7 @@ deploy-manifests() {
 # loki,bundles/loki,overrides/loki.yaml
 deploy-bundles() {
   info "installing helm tiller service"
-  helm init --wait --service-account=hub-admin >/dev/null || return 1
+  helm init --wait --service-account=kore-admin >/dev/null || return 1
 
   if [[ -f ${HELM_REPOS} ]]; then
     info "installing any repository requirements"
